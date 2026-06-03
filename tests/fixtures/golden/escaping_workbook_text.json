@@ -1,0 +1,44 @@
+{
+  "issues": [
+    {
+      "category": "formula_integrity",
+      "details": {
+        "constants": [
+          "1"
+        ]
+      },
+      "evidence": {
+        "cell": "A1",
+        "formula": "=1+<script>",
+        "sheet": "Evil<script>"
+      },
+      "message": "Formula contains hardcoded numeric constants.",
+      "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
+      "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
+      "rule_id": "HARDCODED_NUMERIC_CONSTANT",
+      "severity": "medium",
+      "title": "Hardcoded numeric constant"
+    }
+  ],
+  "sheets": [
+    {
+      "formula_cells": 1,
+      "name": "Evil<script>",
+      "state": "visible",
+      "used_range": "A1:A1"
+    }
+  ],
+  "summary": {
+    "formula_cell_count": 1,
+    "issue_count": 1,
+    "issues_by_category": {
+      "formula_integrity": 1
+    },
+    "issues_by_severity": {
+      "medium": 1
+    },
+    "sheet_count": 1
+  },
+  "supported_format": ".xlsx",
+  "workbook_path": "<workbook>"
+}

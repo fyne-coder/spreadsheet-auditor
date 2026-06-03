@@ -1,0 +1,20 @@
+{
+  "issues": [],
+  "sheets": [
+    {
+      "formula_cells": 0,
+      "name": "Empty",
+      "state": "visible",
+      "used_range": "A1:A1"
+    }
+  ],
+  "summary": {
+    "formula_cell_count": 0,
+    "issue_count": 0,
+    "issues_by_category": {},
+    "issues_by_severity": {},
+    "sheet_count": 1
+  },
+  "supported_format": ".xlsx",
+  "workbook_path": "<workbook>"
+}

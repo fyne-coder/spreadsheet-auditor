@@ -1,0 +1,63 @@
+{
+  "issues": [
+    {
+      "category": "performance",
+      "details": {
+        "functions": [
+          "TODAY"
+        ]
+      },
+      "evidence": {
+        "cell": "B10",
+        "formula": "=TODAY()",
+        "sheet": "Order"
+      },
+      "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
+      "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
+      "rule_id": "VOLATILE_FUNCTION",
+      "severity": "medium",
+      "title": "Volatile function"
+    },
+    {
+      "category": "performance",
+      "details": {
+        "functions": [
+          "TODAY"
+        ]
+      },
+      "evidence": {
+        "cell": "B2",
+        "formula": "=TODAY()",
+        "sheet": "Order"
+      },
+      "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
+      "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
+      "rule_id": "VOLATILE_FUNCTION",
+      "severity": "medium",
+      "title": "Volatile function"
+    }
+  ],
+  "sheets": [
+    {
+      "formula_cells": 2,
+      "name": "Order",
+      "state": "visible",
+      "used_range": "A1:B10"
+    }
+  ],
+  "summary": {
+    "formula_cell_count": 2,
+    "issue_count": 2,
+    "issues_by_category": {
+      "performance": 2
+    },
+    "issues_by_severity": {
+      "medium": 2
+    },
+    "sheet_count": 1
+  },
+  "supported_format": ".xlsx",
+  "workbook_path": "<workbook>"
+}

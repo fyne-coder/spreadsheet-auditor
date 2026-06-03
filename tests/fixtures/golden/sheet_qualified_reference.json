@@ -1,0 +1,50 @@
+{
+  "issues": [
+    {
+      "category": "formula_integrity",
+      "details": {
+        "constants": [
+          "1.05"
+        ]
+      },
+      "evidence": {
+        "cell": "B2",
+        "formula": "='Source'!A1*1.05",
+        "sheet": "Target"
+      },
+      "message": "Formula contains hardcoded numeric constants.",
+      "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
+      "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
+      "rule_id": "HARDCODED_NUMERIC_CONSTANT",
+      "severity": "medium",
+      "title": "Hardcoded numeric constant"
+    }
+  ],
+  "sheets": [
+    {
+      "formula_cells": 0,
+      "name": "Source",
+      "state": "visible",
+      "used_range": "A1:A1"
+    },
+    {
+      "formula_cells": 2,
+      "name": "Target",
+      "state": "visible",
+      "used_range": "A1:B2"
+    }
+  ],
+  "summary": {
+    "formula_cell_count": 2,
+    "issue_count": 1,
+    "issues_by_category": {
+      "formula_integrity": 1
+    },
+    "issues_by_severity": {
+      "medium": 1
+    },
+    "sheet_count": 2
+  },
+  "supported_format": ".xlsx",
+  "workbook_path": "<workbook>"
+}

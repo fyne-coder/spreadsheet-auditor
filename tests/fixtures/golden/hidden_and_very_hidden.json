@@ -1,0 +1,95 @@
+{
+  "issues": [
+    {
+      "category": "performance",
+      "details": {
+        "functions": [
+          "TODAY"
+        ]
+      },
+      "evidence": {
+        "cell": "A1",
+        "formula": "=TODAY()",
+        "sheet": "HiddenSheet"
+      },
+      "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
+      "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
+      "rule_id": "VOLATILE_FUNCTION",
+      "severity": "medium",
+      "title": "Volatile function"
+    },
+    {
+      "category": "performance",
+      "details": {
+        "functions": [
+          "RAND"
+        ]
+      },
+      "evidence": {
+        "cell": "A1",
+        "formula": "=RAND()",
+        "sheet": "Vault"
+      },
+      "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
+      "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
+      "rule_id": "VOLATILE_FUNCTION",
+      "severity": "medium",
+      "title": "Volatile function"
+    },
+    {
+      "category": "formula_integrity",
+      "details": {
+        "constants": [
+          "1"
+        ]
+      },
+      "evidence": {
+        "cell": "A1",
+        "formula": "=1+1",
+        "sheet": "Visible"
+      },
+      "message": "Formula contains hardcoded numeric constants.",
+      "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
+      "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
+      "rule_id": "HARDCODED_NUMERIC_CONSTANT",
+      "severity": "medium",
+      "title": "Hardcoded numeric constant"
+    }
+  ],
+  "sheets": [
+    {
+      "formula_cells": 1,
+      "name": "Visible",
+      "state": "visible",
+      "used_range": "A1:A1"
+    },
+    {
+      "formula_cells": 1,
+      "name": "HiddenSheet",
+      "state": "hidden",
+      "used_range": "A1:A1"
+    },
+    {
+      "formula_cells": 1,
+      "name": "Vault",
+      "state": "veryHidden",
+      "used_range": "A1:A1"
+    }
+  ],
+  "summary": {
+    "formula_cell_count": 3,
+    "issue_count": 3,
+    "issues_by_category": {
+      "formula_integrity": 1,
+      "performance": 2
+    },
+    "issues_by_severity": {
+      "medium": 3
+    },
+    "sheet_count": 3
+  },
+  "supported_format": ".xlsx",
+  "workbook_path": "<workbook>"
+}

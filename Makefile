@@ -55,6 +55,9 @@ test:
 
 regenerate-goldens:
 	$(PYTHON) scripts/emit_goldens.py
+	UPDATE_EVIDENCE_PACKET_GOLDENS=1 go test ./internal/evidence -run TestEvidencePacketGoldenFixtures -count=1
 
 verify-goldens:
 	$(PYTHON) scripts/emit_goldens.py --verify
+	go test ./internal/audit -run TestGoldenParityFixtures -count=1
+	go test ./internal/evidence -run TestEvidencePacketGoldenFixtures -count=1

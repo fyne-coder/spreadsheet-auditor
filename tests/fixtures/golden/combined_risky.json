@@ -12,7 +12,18 @@
         "formula": "=RAND()",
         "sheet": "HiddenInputs"
       },
+      "impact_factors": [
+        {
+          "code": "hidden_sheet",
+          "explanation": "Issue is on a hidden worksheet, so reviewers can miss it during a walkthrough."
+        },
+        {
+          "code": "risky_volatile_functions",
+          "explanation": "Formula uses higher-risk volatile functions: RAND."
+        }
+      ],
       "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "priority": "critical",
       "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
       "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
       "rule_id": "VOLATILE_FUNCTION",
@@ -31,7 +42,14 @@
         "formula": "=A1*1.05",
         "sheet": "Model"
       },
+      "impact_factors": [
+        {
+          "code": "hardcoded_numeric_constant",
+          "explanation": "Control or assumption values are embedded directly in a formula instead of labeled inputs."
+        }
+      ],
       "message": "Formula contains hardcoded numeric constants.",
+      "priority": "medium",
       "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
       "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
       "rule_id": "HARDCODED_NUMERIC_CONSTANT",
@@ -50,7 +68,14 @@
         "formula": "=TODAY()",
         "sheet": "Model"
       },
+      "impact_factors": [
+        {
+          "code": "isolated_low_risk_volatile",
+          "explanation": "Formula only uses TODAY(), which is volatile but usually lower priority than INDIRECT/OFFSET families."
+        }
+      ],
       "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "priority": "low",
       "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
       "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
       "rule_id": "VOLATILE_FUNCTION",
@@ -65,6 +90,7 @@
         "sheet": "Model"
       },
       "message": "Formula references an entire column range, which can slow recalculation.",
+      "priority": "medium",
       "rationale": "Entire-column references expand to very large ranges and can slow recalculation or hide accidental blanks in large worksheets.",
       "remediation": "Restrict the range to the populated rows/columns, or convert the logic to a structured table with explicit bounds.",
       "rule_id": "WHOLE_COLUMN_RANGE",
@@ -83,7 +109,14 @@
         "formula": "='[source.xlsx]Sheet1'!A1",
         "sheet": "Model"
       },
+      "impact_factors": [
+        {
+          "code": "external_workbook_dependency",
+          "explanation": "Formula depends on another workbook file path, version, and availability."
+        }
+      ],
       "message": "Formula references an external workbook.",
+      "priority": "critical",
       "rationale": "The formula points at another workbook file, which makes results depend on external file paths, versions, and availability.",
       "remediation": "Document the external dependency, confirm the linked file path, or paste values into a controlled input range when the model must be self-contained.",
       "rule_id": "EXTERNAL_WORKBOOK_REFERENCE",
@@ -98,6 +131,7 @@
         "sheet": "Model"
       },
       "message": "Formula contains a broken #REF! reference.",
+      "priority": "high",
       "rationale": "The stored formula text still contains #REF!, so the workbook may calculate incorrectly even when neighboring cells look fine.",
       "remediation": "Repair or remove the broken reference inside the formula, then recalculate downstream dependents after the source range is restored.",
       "rule_id": "BROKEN_REF_FORMULA",
@@ -116,7 +150,14 @@
         "formula": "=#REF!+1",
         "sheet": "Model"
       },
+      "impact_factors": [
+        {
+          "code": "hardcoded_numeric_constant",
+          "explanation": "Control or assumption values are embedded directly in a formula instead of labeled inputs."
+        }
+      ],
       "message": "Formula contains hardcoded numeric constants.",
+      "priority": "medium",
       "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
       "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
       "rule_id": "HARDCODED_NUMERIC_CONSTANT",

@@ -77,6 +77,28 @@ func TestScanWritesCSVExportWithExportedAt(t *testing.T) {
 	}
 }
 
+func TestScanCSVIncludesFullPathWhenOptedInAfterWorkbookArgument(t *testing.T) {
+	outputPath := filepath.Join(t.TempDir(), "review-pack.csv")
+	workbookPath := fixturePath(t, "escaping_workbook_text.xlsx")
+	exitCode := run([]string{
+		"scan",
+		workbookPath,
+		"--export-csv",
+		outputPath,
+		"--include-full-path",
+	})
+	if exitCode != 0 {
+		t.Fatalf("expected exit 0, got %d", exitCode)
+	}
+	content, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read csv export: %v", err)
+	}
+	if !strings.Contains(string(content), workbookPath) {
+		t.Fatal("expected opted-in full workbook path in CSV rows")
+	}
+}
+
 func TestScanWritesJSONAndReviewPackTogether(t *testing.T) {
 	dir := t.TempDir()
 	jsonPath := filepath.Join(dir, "report.json")

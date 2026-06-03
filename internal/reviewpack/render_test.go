@@ -42,7 +42,7 @@ func TestRenderEscapesWorkbookText(t *testing.T) {
 		t.Fatalf("audit workbook: %v", err)
 	}
 
-	htmlOutput := RenderHTML(report, fixedExportedAt)
+	htmlOutput := RenderHTML(report, fixedExportedAt, ExportedWorkbookPath(report.WorkbookPath, false))
 	if strings.Contains(htmlOutput, "<script>") {
 		t.Fatal("expected escaped workbook text, found raw <script>")
 	}
@@ -52,8 +52,11 @@ func TestRenderEscapesWorkbookText(t *testing.T) {
 	if !strings.Contains(htmlOutput, html.EscapeString("=1+<script>")) {
 		t.Fatal("expected escaped formula in HTML")
 	}
-	if !strings.Contains(htmlOutput, html.EscapeString(report.WorkbookPath)) {
-		t.Fatal("expected escaped workbook path in HTML")
+	if !strings.Contains(htmlOutput, html.EscapeString(filepath.Base(report.WorkbookPath))) {
+		t.Fatal("expected basename workbook identity in HTML")
+	}
+	if strings.Contains(htmlOutput, html.EscapeString(filepath.Dir(report.WorkbookPath)+string(filepath.Separator))) {
+		t.Fatal("expected export HTML to omit parent directory from workbook identity")
 	}
 }
 
@@ -63,7 +66,7 @@ func TestRenderIncludesExpectedSections(t *testing.T) {
 		t.Fatalf("audit workbook: %v", err)
 	}
 
-	htmlOutput := RenderHTML(report, fixedExportedAt)
+	htmlOutput := RenderHTML(report, fixedExportedAt, ExportedWorkbookPath(report.WorkbookPath, false))
 	for _, section := range []string{
 		"Spreadsheet Auditor Review Pack",
 		"Workbook Summary",
@@ -97,8 +100,8 @@ func TestRenderIsDeterministic(t *testing.T) {
 		t.Fatalf("audit workbook: %v", err)
 	}
 
-	first := RenderHTML(report, fixedExportedAt)
-	second := RenderHTML(report, fixedExportedAt)
+	first := RenderHTML(report, fixedExportedAt, ExportedWorkbookPath(report.WorkbookPath, false))
+	second := RenderHTML(report, fixedExportedAt, ExportedWorkbookPath(report.WorkbookPath, false))
 	if first != second {
 		t.Fatal("expected deterministic HTML output for the same report")
 	}
@@ -116,7 +119,7 @@ func TestRenderSeveritySpanClasses(t *testing.T) {
 		},
 	}
 
-	htmlOutput := RenderHTML(report, fixedExportedAt)
+	htmlOutput := RenderHTML(report, fixedExportedAt, "example.xlsx")
 	if !strings.Contains(htmlOutput, `class="severity-medium"`) {
 		t.Fatal("expected medium severity span class")
 	}
@@ -128,7 +131,7 @@ func TestRenderEmptyReportSections(t *testing.T) {
 		SupportedFormat: ".xlsx",
 	}
 
-	htmlOutput := RenderHTML(report, fixedExportedAt)
+	htmlOutput := RenderHTML(report, fixedExportedAt, "empty.xlsx")
 	if !strings.Contains(htmlOutput, "(none)") {
 		t.Fatal("expected placeholder rows for empty report")
 	}
@@ -141,7 +144,11 @@ func TestRenderWritesExpectedFileBytes(t *testing.T) {
 	}
 
 	outputPath := filepath.Join(t.TempDir(), "review-pack.html")
-	if err := os.WriteFile(outputPath, []byte(RenderHTML(report, fixedExportedAt)), 0o644); err != nil {
+	if err := os.WriteFile(
+		outputPath,
+		[]byte(RenderHTML(report, fixedExportedAt, ExportedWorkbookPath(report.WorkbookPath, false))),
+		privateExportFileMode,
+	); err != nil {
 		t.Fatalf("write review pack: %v", err)
 	}
 	if _, err := os.Stat(outputPath); err != nil {

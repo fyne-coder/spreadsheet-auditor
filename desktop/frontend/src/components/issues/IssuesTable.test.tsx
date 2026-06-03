@@ -11,6 +11,7 @@ function renderTable(issueCount = 5) {
       RuleID: "RULE_A",
       Message: "alpha message",
       Severity: "high",
+      Priority: "high",
       Category: "structure",
       Evidence: { Sheet: "Inputs", Cell: "B2", Formula: "=SUM(A1:A10)" },
     }),
@@ -18,6 +19,7 @@ function renderTable(issueCount = 5) {
       RuleID: "RULE_B",
       Message: "beta message",
       Severity: "medium",
+      Priority: "medium",
       Category: "formula",
       Evidence: { Sheet: "Calc", Cell: "C3", Formula: "" },
     }),
@@ -25,6 +27,7 @@ function renderTable(issueCount = 5) {
       RuleID: "RULE_C",
       Message: "gamma hidden",
       Severity: "low",
+      Priority: "low",
       Category: "reference",
       Evidence: { Sheet: "Outputs", Cell: "D4", Formula: "" },
     }),
@@ -32,6 +35,7 @@ function renderTable(issueCount = 5) {
       RuleID: "RULE_D",
       Message: "delta note",
       Severity: "high",
+      Priority: "high",
       Category: "formula",
       Evidence: { Sheet: "Inputs", Cell: "E5", Formula: "" },
     }),
@@ -39,6 +43,7 @@ function renderTable(issueCount = 5) {
       RuleID: "RULE_E",
       Message: "epsilon tail",
       Severity: "medium",
+      Priority: "medium",
       Category: "structure",
       Evidence: { Sheet: "Calc", Cell: "F6", Formula: "" },
     }),
@@ -53,14 +58,14 @@ function renderTable(issueCount = 5) {
 }
 
 describe("IssuesTable", () => {
-  it("sorts by severity when header is clicked", async () => {
+  it("sorts by priority when header is clicked", async () => {
     const user = userEvent.setup();
     renderTable();
-    const severityHeader = screen.getByRole("columnheader", { name: /severity/i });
-    await user.click(severityHeader);
+    const priorityHeader = screen.getByRole("columnheader", { name: /priority/i });
+    await user.click(priorityHeader);
     const rows = screen.getAllByTestId(/^issue-row-/);
     expect(rows.length).toBeGreaterThan(0);
-    expect(within(rows[0]).getByText("high")).toBeInTheDocument();
+    expect(within(rows[0]).getAllByText("high").length).toBeGreaterThan(0);
   });
 
   it("filters rows with global search", async () => {
@@ -98,8 +103,53 @@ describe("IssuesTable", () => {
     const user = userEvent.setup();
     renderTable(1);
     await user.click(screen.getByTestId(/^issue-row-/));
-    expect(screen.getByText("Issue detail")).toBeInTheDocument();
+    expect(screen.getByText("Issue")).toBeInTheDocument();
+    expect(screen.getByText(/Why this matters/i)).toBeInTheDocument();
+    expect(screen.getByText(/Suggested fix/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Copy issue key/i)).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("issue-advanced-toggle"));
     expect(screen.getByText(/Copy issue key/i)).toBeInTheDocument();
+  });
+
+  it("opens row detail drawer from an explicit Details button", async () => {
+    const user = userEvent.setup();
+    renderTable(1);
+
+    await user.click(screen.getByRole("button", { name: /open details for rule_a/i }));
+
+    expect(screen.getByText("Issue")).toBeInTheDocument();
+    expect(screen.getByText(/Why this matters/i)).toBeInTheDocument();
+  });
+
+  it("accepts controlled column filters from overview routing", () => {
+    const issues = [
+      makeIssue({
+        RuleID: "RULE_A",
+        Message: "alpha message",
+        Severity: "high",
+        Category: "structure",
+      }),
+      makeIssue({
+        RuleID: "RULE_B",
+        Message: "beta message",
+        Severity: "medium",
+        Category: "formula",
+      }),
+    ];
+    const report = makeReport(issues);
+
+    render(
+      <MantineProvider>
+        <IssuesTable
+          issues={report.Issues ?? []}
+          columnFilters={[{ id: "Severity", value: ["high"] }]}
+        />
+      </MantineProvider>,
+    );
+
+    expect(screen.getByText("alpha message")).toBeInTheDocument();
+    expect(screen.queryByText("beta message")).not.toBeInTheDocument();
+    expect(screen.getByTestId("issue-counts")).toHaveTextContent("1 filtered");
   });
 
   it("toggles column visibility", async () => {
@@ -152,10 +202,11 @@ describe("IssuesTable", () => {
       </MantineProvider>,
     );
 
-    const truncatedCells = screen.getAllByTestId("truncated-cell");
+    const truncatedCells = screen
+      .getAllByTestId("truncated-cell")
+      .filter((cell) => cell.getAttribute("data-truncate") === "true");
     expect(truncatedCells.length).toBeGreaterThanOrEqual(2);
     for (const cell of truncatedCells) {
-      expect(cell).toHaveAttribute("data-truncate", "true");
       expect(cell.className).toMatch(/mantine-Text-root/);
     }
     expect(screen.getByText(longFormula)).toBeInTheDocument();

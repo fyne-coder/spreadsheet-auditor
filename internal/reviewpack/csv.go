@@ -14,6 +14,8 @@ var csvHeader = []string{
 	"workbook_path",
 	"supported_format",
 	"issue_id",
+	"priority",
+	"impact_factors",
 	"severity",
 	"category",
 	"rule_id",
@@ -28,8 +30,11 @@ var csvHeader = []string{
 }
 
 // WriteCSV writes a review-pack CSV using encoding/csv.
-func WriteCSV(report *model.AuditReport, outputPath string, exportedAt time.Time) error {
-	file, err := os.Create(outputPath)
+func WriteCSV(report *model.AuditReport, outputPath string, exportedAt time.Time, workbookIdentity string) error {
+	if workbookIdentity == "" {
+		workbookIdentity = ExportedWorkbookPath(report.WorkbookPath, false)
+	}
+	file, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, privateExportFileMode)
 	if err != nil {
 		return err
 	}
@@ -48,9 +53,11 @@ func WriteCSV(report *model.AuditReport, outputPath string, exportedAt time.Time
 		}
 		row := []string{
 			exportedAtValue,
-			report.WorkbookPath,
+			workbookIdentity,
 			report.SupportedFormat,
 			model.IssueID(issue),
+			issue.Priority,
+			impactFactorSummary(issue.ImpactFactors),
 			issue.Severity,
 			issue.Category,
 			issue.RuleID,
@@ -88,7 +95,7 @@ func sanitizeCSVField(value string) string {
 	}
 }
 
-const csvHeaderLine = "exported_at,workbook_path,supported_format,issue_id,severity,category,rule_id,title,sheet,cell,formula,message,rationale,remediation,details_json\n"
+const csvHeaderLine = "exported_at,workbook_path,supported_format,issue_id,priority,impact_factors,severity,category,rule_id,title,sheet,cell,formula,message,rationale,remediation,details_json\n"
 
 // CSVHeaderLine returns the canonical header row bytes for regression tests.
 func CSVHeaderLine() string {

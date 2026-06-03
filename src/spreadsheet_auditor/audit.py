@@ -16,6 +16,7 @@ from spreadsheet_auditor.formula_pattern import (
     normalize_formula,
 )
 from spreadsheet_auditor.models import AuditReport, Issue, SheetSummary, build_issue
+from spreadsheet_auditor.priority import apply_priorities
 
 SUPPORTED_SUFFIXES = {".xlsx", ".xlsm"}
 VOLATILE_FUNCTIONS = {
@@ -98,7 +99,7 @@ def audit_workbook(path: str | Path) -> AuditReport:
         workbook_path=workbook_path,
         supported_format=suffix,
         sheets=sheets,
-        issues=sorted(issues, key=_issue_sort_key),
+        issues=apply_priorities(sorted(issues, key=_issue_sort_key), sheets),
     )
     _close_workbook(workbook)
     return report

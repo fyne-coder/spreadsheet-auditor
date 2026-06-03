@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "spreadsheet-auditor"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first static auditor for inherited Excel workbooks."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -35,4 +35,3 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

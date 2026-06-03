@@ -201,8 +201,16 @@ def emit_all(output_workbooks_dir: Path, output_golden_dir: Path) -> list[tuple[
 
 def compare_tree(left: Path, right: Path) -> list[str]:
     errors: list[str] = []
-    left_files = {path.relative_to(left) for path in left.rglob("*") if path.is_file()}
-    right_files = {path.relative_to(right) for path in right.rglob("*") if path.is_file()}
+    left_files = {
+        path.relative_to(left)
+        for path in left.rglob("*")
+        if path.is_file() and not path.name.endswith(".packet.json")
+    }
+    right_files = {
+        path.relative_to(right)
+        for path in right.rglob("*")
+        if path.is_file() and not path.name.endswith(".packet.json")
+    }
 
     missing = sorted(left_files - right_files)
     extra = sorted(right_files - left_files)

@@ -1,4 +1,4 @@
-import { Badge, Paper, Stack, Text, Title } from "@mantine/core";
+import { Badge, List, Paper, Stack, Text, Title } from "@mantine/core";
 
 export function EmptyState() {
   return (
@@ -6,9 +6,14 @@ export function EmptyState() {
       <Stack gap="md">
         <Title order={2}>Choose a workbook to review</Title>
         <Text c="dimmed">
-          Static scan only. The analyzer reads workbook structure and formulas without
-          executing macros, refreshing links, or evaluating formulas.
+          The scan reads the file only. It does not run macros, refresh links, or
+          recalculate formulas.
         </Text>
+        <List size="sm" c="dimmed" spacing={4}>
+          <List.Item>A plain overview of what was found.</List.Item>
+          <List.Item>A list of issues to fix or ask about.</List.Item>
+          <List.Item>An optional package to send to your AI assistant.</List.Item>
+        </List>
         <Stack gap="xs">
           <Badge variant="light">Read-only</Badge>
           <Badge variant="light">.xlsx / .xlsm</Badge>

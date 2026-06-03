@@ -151,6 +151,18 @@ class IssueEvidence:
 
 
 @dataclass(frozen=True)
+class ImpactFactor:
+    code: str
+    explanation: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "code": self.code,
+            "explanation": self.explanation,
+        }
+
+
+@dataclass(frozen=True)
 class Issue:
     rule_id: str
     title: str
@@ -161,6 +173,8 @@ class Issue:
     message: str
     evidence: IssueEvidence
     details: dict[str, Any] = field(default_factory=dict)
+    priority: str = ""
+    impact_factors: tuple[ImpactFactor, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -173,6 +187,12 @@ class Issue:
             "message": self.message,
             "evidence": self.evidence.to_dict(),
         }
+        if self.priority:
+            payload["priority"] = self.priority
+        if self.impact_factors:
+            payload["impact_factors"] = [
+                factor.to_dict() for factor in self.impact_factors
+            ]
         if self.details:
             payload["details"] = {key: self.details[key] for key in sorted(self.details)}
         return payload
@@ -193,6 +213,8 @@ def build_issue(
         title=rule.title,
         severity=rule.severity,
         category=rule.category,
+        priority="",
+        impact_factors=(),
         rationale=rule.rationale,
         remediation=rule.remediation,
         message=message,

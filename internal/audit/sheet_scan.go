@@ -47,15 +47,7 @@ func sheetState(file *excelize.File, sheetName string) (string, error) {
 }
 
 func scanSheet(file *excelize.File, sheetName string) (int, string, []model.Issue, error) {
-	dimension, err := file.GetSheetDimension(sheetName)
-	if err != nil {
-		return 0, "", nil, err
-	}
-	if dimension == "" {
-		dimension = "A1:A1"
-	}
-
-	startCol, startRow, endCol, endRow, err := rangeToCoordinates(dimension)
+	rows, err := file.GetRows(sheetName)
 	if err != nil {
 		return 0, "", nil, err
 	}
@@ -67,14 +59,11 @@ func scanSheet(file *excelize.File, sheetName string) (int, string, []model.Issu
 	var issues []model.Issue
 	var formulaRecords []formula.CellRecord
 
-	for row := startRow; row <= endRow; row++ {
-		for col := startCol; col <= endCol; col++ {
+	for rowIndex, columns := range rows {
+		row := rowIndex + 1
+		for colIndex, displayed := range columns {
+			col := colIndex + 1
 			coordinate, err := excelize.CoordinatesToCellName(col, row)
-			if err != nil {
-				return 0, "", nil, err
-			}
-
-			displayed, err := file.GetCellValue(sheetName, coordinate)
 			if err != nil {
 				return 0, "", nil, err
 			}
@@ -124,6 +113,8 @@ func scanSheet(file *excelize.File, sheetName string) (int, string, []model.Issu
 					"",
 					nil,
 				))
+			} else if code, ok := displayedExcelError(displayed); ok {
+				issues = append(issues, excelErrorValueIssue(sheetName, coordinate, code))
 			}
 		}
 	}
@@ -146,29 +137,6 @@ func openpyxlUsedRange(hasContent bool, maxCol, maxRow int) (string, error) {
 		return "", err
 	}
 	return "A1:" + end, nil
-}
-
-func rangeToCoordinates(dimension string) (int, int, int, int, error) {
-	parts := strings.Split(dimension, ":")
-	if len(parts) == 1 {
-		col, row, err := excelize.CellNameToCoordinates(parts[0])
-		return col, row, col, row, err
-	}
-	startCol, startRow, err := excelize.CellNameToCoordinates(parts[0])
-	if err != nil {
-		return 0, 0, 0, 0, err
-	}
-	endCol, endRow, err := excelize.CellNameToCoordinates(parts[1])
-	if err != nil {
-		return 0, 0, 0, 0, err
-	}
-	if startCol > endCol {
-		startCol, endCol = endCol, startCol
-	}
-	if startRow > endRow {
-		startRow, endRow = endRow, startRow
-	}
-	return startCol, startRow, endCol, endRow, nil
 }
 
 func cellFormula(file *excelize.File, sheetName, coordinate, displayed string) (string, bool, error) {

@@ -1,0 +1,227 @@
+{
+  "audit_hash": "fd62e3fc3e09d77b2e47c845adaadc2a6f2c139b996b5f04185c3d78fd0827f2",
+  "citation_map": {
+    "formula_cluster_ids": [],
+    "issue_ids": [
+      "BROKEN_REF_FORMULA|Model|B5|Formula contains a broken #REF! reference.|62414f70",
+      "EXTERNAL_WORKBOOK_REFERENCE|Model|B4|Formula references an external workbook.|bf6032f0",
+      "HARDCODED_NUMERIC_CONSTANT|Model|B1|Formula contains hardcoded numeric constants.|59825b94",
+      "HARDCODED_NUMERIC_CONSTANT|Model|B5|Formula contains hardcoded numeric constants.|5d0bf0d3",
+      "VOLATILE_FUNCTION|HiddenInputs|A1|Formula uses volatile functions that can trigger expensive recalculation.|0b67fd07",
+      "VOLATILE_FUNCTION|Model|B2|Formula uses volatile functions that can trigger expensive recalculation.|cdd7c55e",
+      "WHOLE_COLUMN_RANGE|Model|B3|Formula references an entire column range, which can slow recalculation.|cb562b05"
+    ],
+    "rule_ids": [
+      "BROKEN_REF_FORMULA",
+      "EXTERNAL_WORKBOOK_REFERENCE",
+      "HARDCODED_NUMERIC_CONSTANT",
+      "VOLATILE_FUNCTION",
+      "WHOLE_COLUMN_RANGE"
+    ],
+    "sheet_cells": [
+      "HiddenInputs!A1",
+      "Model!B1",
+      "Model!B2",
+      "Model!B3",
+      "Model!B4",
+      "Model!B5"
+    ],
+    "sheet_names": [
+      "HiddenInputs",
+      "Model"
+    ]
+  },
+  "formula_families": [],
+  "audit_findings": [
+    {
+      "cell": "A1",
+      "category": "performance",
+      "details": {
+        "functions": [
+          "RAND"
+        ]
+      },
+      "formula": "=RAND()",
+      "impact_factors": [
+        {
+          "code": "hidden_sheet",
+          "explanation": "Issue is on a hidden worksheet, so reviewers can miss it during a walkthrough."
+        },
+        {
+          "code": "risky_volatile_functions",
+          "explanation": "Formula uses higher-risk volatile functions: RAND."
+        }
+      ],
+      "issue_id": "VOLATILE_FUNCTION|HiddenInputs|A1|Formula uses volatile functions that can trigger expensive recalculation.|0b67fd07",
+      "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "priority": "critical",
+      "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
+      "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
+      "rule_id": "VOLATILE_FUNCTION",
+      "severity": "medium",
+      "sheet": "HiddenInputs",
+      "title": "Volatile function"
+    },
+    {
+      "cell": "B1",
+      "category": "formula_integrity",
+      "details": {
+        "constants": [
+          "1.05"
+        ]
+      },
+      "formula": "=A1*1.05",
+      "impact_factors": [
+        {
+          "code": "hardcoded_numeric_constant",
+          "explanation": "Control or assumption values are embedded directly in a formula instead of labeled inputs."
+        }
+      ],
+      "issue_id": "HARDCODED_NUMERIC_CONSTANT|Model|B1|Formula contains hardcoded numeric constants.|59825b94",
+      "message": "Formula contains hardcoded numeric constants.",
+      "priority": "medium",
+      "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
+      "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
+      "rule_id": "HARDCODED_NUMERIC_CONSTANT",
+      "severity": "medium",
+      "sheet": "Model",
+      "title": "Hardcoded numeric constant"
+    },
+    {
+      "cell": "B2",
+      "category": "performance",
+      "details": {
+        "functions": [
+          "TODAY"
+        ]
+      },
+      "formula": "=TODAY()",
+      "impact_factors": [
+        {
+          "code": "isolated_low_risk_volatile",
+          "explanation": "Formula only uses TODAY(), which is volatile but usually lower priority than INDIRECT/OFFSET families."
+        }
+      ],
+      "issue_id": "VOLATILE_FUNCTION|Model|B2|Formula uses volatile functions that can trigger expensive recalculation.|cdd7c55e",
+      "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "priority": "low",
+      "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
+      "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
+      "rule_id": "VOLATILE_FUNCTION",
+      "severity": "medium",
+      "sheet": "Model",
+      "title": "Volatile function"
+    },
+    {
+      "cell": "B3",
+      "category": "performance",
+      "formula": "=SUMPRODUCT(A:A,B:B)",
+      "issue_id": "WHOLE_COLUMN_RANGE|Model|B3|Formula references an entire column range, which can slow recalculation.|cb562b05",
+      "message": "Formula references an entire column range, which can slow recalculation.",
+      "priority": "medium",
+      "rationale": "Entire-column references expand to very large ranges and can slow recalculation or hide accidental blanks in large worksheets.",
+      "remediation": "Restrict the range to the populated rows/columns, or convert the logic to a structured table with explicit bounds.",
+      "rule_id": "WHOLE_COLUMN_RANGE",
+      "severity": "medium",
+      "sheet": "Model",
+      "title": "Whole-column range reference"
+    },
+    {
+      "cell": "B4",
+      "category": "lineage",
+      "details": {
+        "references": [
+          "[source.xlsx]"
+        ]
+      },
+      "formula": "='[source.xlsx]Sheet1'!A1",
+      "impact_factors": [
+        {
+          "code": "external_workbook_dependency",
+          "explanation": "Formula depends on another workbook file path, version, and availability."
+        }
+      ],
+      "issue_id": "EXTERNAL_WORKBOOK_REFERENCE|Model|B4|Formula references an external workbook.|bf6032f0",
+      "message": "Formula references an external workbook.",
+      "priority": "critical",
+      "rationale": "The formula points at another workbook file, which makes results depend on external file paths, versions, and availability.",
+      "remediation": "Document the external dependency, confirm the linked file path, or paste values into a controlled input range when the model must be self-contained.",
+      "rule_id": "EXTERNAL_WORKBOOK_REFERENCE",
+      "severity": "medium",
+      "sheet": "Model",
+      "title": "External workbook reference"
+    },
+    {
+      "cell": "B5",
+      "category": "formula_integrity",
+      "formula": "=#REF!+1",
+      "issue_id": "BROKEN_REF_FORMULA|Model|B5|Formula contains a broken #REF! reference.|62414f70",
+      "message": "Formula contains a broken #REF! reference.",
+      "priority": "high",
+      "rationale": "The stored formula text still contains #REF!, so the workbook may calculate incorrectly even when neighboring cells look fine.",
+      "remediation": "Repair or remove the broken reference inside the formula, then recalculate downstream dependents after the source range is restored.",
+      "rule_id": "BROKEN_REF_FORMULA",
+      "severity": "high",
+      "sheet": "Model",
+      "title": "Broken reference in formula"
+    },
+    {
+      "cell": "B5",
+      "category": "formula_integrity",
+      "details": {
+        "constants": [
+          "1"
+        ]
+      },
+      "formula": "=#REF!+1",
+      "impact_factors": [
+        {
+          "code": "hardcoded_numeric_constant",
+          "explanation": "Control or assumption values are embedded directly in a formula instead of labeled inputs."
+        }
+      ],
+      "issue_id": "HARDCODED_NUMERIC_CONSTANT|Model|B5|Formula contains hardcoded numeric constants.|5d0bf0d3",
+      "message": "Formula contains hardcoded numeric constants.",
+      "priority": "medium",
+      "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
+      "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
+      "rule_id": "HARDCODED_NUMERIC_CONSTANT",
+      "severity": "medium",
+      "sheet": "Model",
+      "title": "Hardcoded numeric constant"
+    }
+  ],
+  "packet_version": "1",
+  "sheets": [
+    {
+      "formula_cells": 5,
+      "name": "Model",
+      "state": "visible",
+      "used_range": "A1:B5"
+    },
+    {
+      "formula_cells": 1,
+      "name": "HiddenInputs",
+      "state": "hidden",
+      "used_range": "A1:A1"
+    }
+  ],
+  "workbook": {
+    "name": "<workbook>",
+    "supported_format": ".xlsx",
+    "summary": {
+      "SheetCount": 2,
+      "FormulaCellCount": 6,
+      "IssueCount": 7,
+      "IssuesBySeverity": {
+        "high": 1,
+        "medium": 6
+      },
+      "IssuesByCategory": {
+        "formula_integrity": 3,
+        "lineage": 1,
+        "performance": 3
+      }
+    }
+  }
+}

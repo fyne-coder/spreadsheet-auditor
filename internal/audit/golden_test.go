@@ -66,11 +66,17 @@ func canonicalReport(t *testing.T, workbook string) []byte {
 func TestGoldenParityFixtures(t *testing.T) {
 	for _, name := range goldenFixtures {
 		t.Run(name, func(t *testing.T) {
-			expected, err := os.ReadFile(goldenPath(t, name))
+			actual := canonicalReport(t, workbookPath(t, name))
+			path := goldenPath(t, name)
+			if os.Getenv("UPDATE_GOLDENS") == "1" {
+				if err := os.WriteFile(path, actual, 0o644); err != nil {
+					t.Fatalf("write golden: %v", err)
+				}
+			}
+			expected, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("read golden: %v", err)
 			}
-			actual := canonicalReport(t, workbookPath(t, name))
 			if string(actual) != string(expected) {
 				t.Fatalf("golden drift for %s (go %d bytes, golden %d bytes); first diff context:\n%s",
 					name, len(actual), len(expected), diffContext(expected, actual))

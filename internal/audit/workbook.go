@@ -7,6 +7,7 @@ import (
 
 	"github.com/xuri/excelize/v2"
 	"spreadsheet-auditor/internal/model"
+	"spreadsheet-auditor/internal/priority"
 )
 
 var supportedSuffixes = map[string]struct{}{
@@ -60,6 +61,8 @@ func AuditWorkbook(path string) (*model.AuditReport, error) {
 		})
 	}
 
+	issues = append(issues, definedNameExternalRefIssues(file)...)
+
 	model.SortIssues(issues)
 
 	report := &model.AuditReport{
@@ -68,6 +71,8 @@ func AuditWorkbook(path string) (*model.AuditReport, error) {
 		Sheets:          sheets,
 		Issues:          issues,
 	}
+	priority.Apply(report)
+	model.ApplyIssueIDs(report.Issues)
 	report.Summary = report.ReportSummary()
 	return report, nil
 }

@@ -4,14 +4,17 @@
 
 ```mermaid
 flowchart LR
-    A["Excel workbook (.xlsx/.xlsm)"] --> B["Static analyzer"]
+    A["Excel workbook (.xlsx/.xlsm)"] --> B["Go static analyzer"]
     B --> C["Workbook map"]
     B --> D["Deterministic lint rules"]
     B --> E["Issue list"]
-    C --> F["JSON report"]
+    C --> F["AuditReport"]
     D --> F
     E --> F
-    F --> G["HTML review pack"]
+    F --> G["JSON report"]
+    F --> H["HTML / CSV review pack"]
+    F --> I["AI evidence packet / prompt bundle"]
+    F --> J["Wails desktop UI"]
 ```
 
 ## Safety Contract
@@ -24,9 +27,17 @@ Default scans are static and read-only:
 - no formula evaluation
 - no workbook mutation
 
-## Initial Runtime Choice
+## Runtime Split
 
-Python is the bootstrap runtime because it provides fast local iteration and mature workbook libraries. `openpyxl` is the first parser for `.xlsx` and `.xlsm` files. `defusedxml` is included because workbook parsing depends on XML handling and the product category often receives untrusted files.
+Python remains the parity oracle for committed golden fixtures. The shipped CLI
+and desktop analyzer path is Go:
+
+- Python uses `openpyxl` and `defusedxml` for the original static analyzer and
+  golden fixture generation.
+- Go uses Excelize for workbook parsing and `xuri/efp` for formula tokenization
+  in the CLI, review-pack exports, evidence packet builder, and Wails desktop
+  app.
+- The Wails frontend does not duplicate workbook parsing or lint logic.
 
 ## Initial Analyzer Flow
 
@@ -39,8 +50,8 @@ Python is the bootstrap runtime because it provides fast local iteration and mat
 
 ## v0.1 JSON Report Contract
 
-The CLI `scan` command serializes an `AuditReport` object. Top-level keys are stable and
-deterministic when emitted with `json.dumps(..., sort_keys=True)`:
+The Python and Go `scan` commands serialize an `AuditReport` object. Top-level
+keys are stable for committed fixtures through canonical JSON generation:
 
 | Section | Purpose |
 | --- | --- |
@@ -86,15 +97,21 @@ root, not on each issue.
 
 ### Rule Registry
 
-Rule metadata is centralized in `spreadsheet_auditor.models.RULES`. Audit code calls
-`build_issue(...)` so every emitted issue carries the same title, severity, category,
-rationale, and remediation as the registry definition. New rules must be added to `RULES`
-before lint code references them.
+Rule metadata is centralized in both runtime models:
 
-Current bootstrap rules:
+- Python: `spreadsheet_auditor.models.RULES`
+- Go: `internal/model/rules.go`
+
+Audit code builds issues through those registries so every emitted issue carries
+the same title, severity, category, rationale, and remediation. New rules must
+be added to the relevant registry before lint code references them.
+
+Current rules:
 
 - `BROKEN_REF_VALUE`
 - `BROKEN_REF_FORMULA`
+- `EXCEL_ERROR_VALUE` (Go; displayed `#DIV/0!`, `#VALUE!`, `#NAME?`, `#N/A`, `#NUM!`, `#NULL!`, `#SPILL!`, `#CALC!`)
+- `EXCEL_ERROR_FORMULA` (Go; formula text contains the same sentinels)
 - `EXTERNAL_WORKBOOK_REFERENCE`
 - `FORMULA_PARSE_ERROR`
 - `FORMULA_PATTERN_ANOMALY`
@@ -109,9 +126,10 @@ conservative row/column runs and compares position-normalized formula patterns.
 
 ### Normalization
 
-`spreadsheet_auditor.formula_pattern.normalize_formula` tokenizes a stored formula with
-`openpyxl.formula.Tokenizer` and rewrites cell/range operands relative to the formula
-cell:
+The Python parity oracle uses `spreadsheet_auditor.formula_pattern.normalize_formula`
+with `openpyxl.formula.Tokenizer`. The Go analyzer uses `internal/formula`
+with `xuri/efp` tokenization. Both rewrite cell/range operands relative to the
+formula cell:
 
 - Relative references become `R{row_offset}C{col_offset}` offsets from the anchor cell.
 - Absolute row/column markers (`$`) are preserved in the normalized token.
@@ -201,15 +219,28 @@ The Go CLI mirrors Python `scan` flags: `--output` / `-o` for JSON,
 
 `internal/reviewpack` renders from the in-memory `AuditReport`:
 
-- `RenderHTML(report, exportedAt)` matches the Python section layout and escapes
-  workbook-provided strings with `html.EscapeString`.
+- `RenderHTML(report, exportedAt, workbookIdentity)` matches the Python section
+  layout, escapes workbook-provided strings with `html.EscapeString`, and lets
+  exports use basename-only workbook identity unless full path is explicitly
+  opted in.
 - `WriteCSV` uses Go `encoding/csv` with a fixed header order, canonical
   `details_json`, and CSV injection mitigation for Excel-opened values.
 - `ExportOptions` supports optional `issue_id` selection
-  (`rule_id|sheet|cell|message`) filtered server-side.
+  (`rule_id|sheet|cell|message|suffix`) filtered server-side. The suffix is a
+  short deterministic hash of formula/details evidence to avoid same-cell
+  collisions while keeping IDs readable.
 
 `AuditService.SaveExport` is the Wails entry point; `SaveReviewPack` remains a
 deprecated HTML wrapper for one release.
+
+The desktop export modal adds a workflow-level job selector:
+
+- Owner summary: defaults to HTML for workbook-owner handoff.
+- Detailed audit: defaults to HTML for follow-up review.
+- Issue list: defaults to CSV for sorting, tracking, or cleanup.
+
+All three jobs currently route through `SaveExport`; the job choice controls the
+recommended/default format rather than a separate backend report template.
 
 ## Wails v2 Desktop Shell
 
@@ -226,22 +257,121 @@ flowchart LR
     R --> M
 ```
 
-`AuditService` exposes `ScanWorkbook`, `RenderReviewPack`, `SaveExport` (HTML or
-CSV with optional selected issue IDs), and deprecated `SaveReviewPack`, plus file
-dialogs for workbook selection and export paths. The frontend shows summary
-rollups, a filterable issues table, and review-pack export (Slice 3 will add the
-export modal UX).
+`AuditService` exposes `ScanWorkbook`, `BuildAIHandoff`,
+`ValidateUnderstandingReport`, `SaveUnderstandingReport`, `RenderReviewPack`,
+`SaveExport` (HTML or CSV with optional selected issue IDs and full-path
+opt-in), deprecated `SaveReviewPack`, JSON save helpers, and file dialogs for
+workbook selection and export paths. The frontend shows the audit overview, summary rollups,
+filterable issues table, issue detail drawer, export modal, and optional
+AI-assistant handoff panel.
+
+`make desktop-bindings` regenerates Wails bindings and removes
+`desktop/frontend/node_modules`; the next frontend check or build performs a
+fresh `npm ci`.
+
+## LLM Evidence Packet V1
+
+`internal/evidence.BuildPacket` derives an `EvidencePacketV1` from the existing
+`AuditReport`. This packet is a reviewer-grade context artifact for manual LLM
+use and future provider integrations; it is not part of deterministic issue
+detection.
+
+The packet includes:
+
+- `packet_version: "1"` and `audit_hash` derived from canonical audit JSON with
+  `workbook_path` normalized to `<workbook>` so the hash does not vary by local
+  filesystem path
+- workbook basename only, never the absolute workbook path
+- workbook summary and sheet summaries from the deterministic scan
+- audit findings with issue ID, rule ID, severity, exact sheet/cell evidence,
+  formula text when already present in issue evidence, rationale, and remediation
+- formula-family entries for deterministic formula-pattern anomaly issues
+- a citation map containing valid `issue_id`, `rule_id`, `sheet!cell`,
+  `formula_cluster_id`, and sheet-name citations
+
+The packet does not include raw workbook bytes, VBA bytes, full sheet dumps, or
+general cell-value dumps. Issue `details` are projected through an explicit
+allowlist before packet output so future analyzer rules cannot accidentally
+smuggle broad cell values into LLM context. Prompt bundle options add redaction,
+exclusions, and capped workbook slices, but workbook slices remain disabled by
+default and separate from deterministic scan behavior.
+
+## Prompt Bundle V1 (Slice 2)
+
+`internal/promptpack` prepares redacted, exclusion-aware evidence for manual LLM
+use. `BuildAIHandoff` on `AuditService` scans once and returns aligned prompt
+text, evidence packet JSON, prompt bundle JSON, and the structured bundle for UI
+preview. `BuildPromptBundle`, `BuildEvidencePacketJSON`, and
+`BuildPromptBundleJSON` remain for compatibility and route through the same
+single-report builder. `SaveEvidencePacket` / `SavePromptBundle` apply the same
+`PromptBundleOptions` so preview, copy, and save stay aligned.
+
+`PromptBundleV1` includes:
+
+- `bundle_version` and `prompt_version` pins
+- deterministic `instructions` with untrusted-data delimiters
+  (`<<<EVIDENCE_PACKET_UNTRUSTED_BEGIN>>>` / `<<<EVIDENCE_PACKET_UNTRUSTED_END>>>`)
+- embedded `evidence_packet` JSON after redaction and exclusions
+- `response_schema` describing `UnderstandingReportV1`
+- assembled `prompt` text for copy/export
+
+Redaction defaults remove absolute/local paths, URI-like external paths,
+connection-string-like values, and obvious secret-like key/value patterns from
+packet strings and allowlisted issue `details`. Sheet exclusion uses exact sheet
+names; cell exclusion uses exact `sheet!cell` citations. Workbook slices remain
+off unless `enable_workbook_slices` is set; caps apply via
+`max_slice_rows`, `max_slice_columns`, and `max_packet_bytes`.
+
+`BuildEvidencePacket` without options still returns the raw Slice 1 packet from
+`evidence.BuildPacket` so committed packet goldens stay stable.
+
+`UnderstandingReportV1` is the structured answer shape expected from an LLM:
+
+- `workbook_purpose`
+- `sheet_roles`
+- `key_flows`
+- `major_risks`
+- `cleanup_plan`
+- `owner_questions`
+- `confidence_notes`
+
+Every claim section carries citations that must resolve against the packet
+citation map. `internal/evidence.ValidateUnderstandingJSON` rejects missing
+required sections, unsupported top-level sections, malformed JSON, and citations
+not present in the packet map. Rejected LLM output must not be rendered as
+grounded deterministic findings.
+
+## Desktop Understanding UI (Slice 3)
+
+After a successful scan, the desktop app shows an optional **Use with your AI
+assistant** handoff panel (separate from the deterministic issues table) that:
+
+- builds preview content from `BuildAIHandoff(path, PromptBundleOptions)` (one
+  backend scan per open/refresh)
+- accepts exact sheet-name and `sheet!cell` exclusions via text fields
+- exposes preview tabs for manifest, findings, formula families, citation map,
+  and assembled prompt text
+- copies or saves the same bundle/packet payloads used for preview
+- validates pasted `UnderstandingReportV1` JSON through
+  `ValidateUnderstandingReport`
+- saves the verified AI analysis as JSON and copies it as Markdown only after
+  cited evidence resolves
+- renders validated LLM sections only when citations resolve to packet entries;
+  accepted UI copy states that claim substance still needs human review.
+  Rejected JSON or fabricated citations stay in a dedicated rejected state
+
+Deterministic `report.Issues` and severities are never mutated by LLM paste-back.
 
 Build and dev commands are documented in `desktop/README.md` and the root
 `README.md` (`make desktop-bindings`, `make desktop-build`, `wails dev`).
 
-The desktop app now carries the v0.1 package identity used for signing and
+The desktop app now carries the v0.2 package identity used for signing and
 notarization planning:
 
 - product name: `Spreadsheet Auditor`
 - bundle identifier: `com.fynellc.spreadsheet-auditor`
 - output executable: `spreadsheet-auditor-desktop`
-- product version: `0.1.0`
+- product version: `0.2.0`
 
 The certification path mirrors the prior Gongctl Desktop pattern: keep source in
 git, build locally, Developer ID sign with hardened runtime, submit to Apple
@@ -250,9 +380,9 @@ notarization, staple the accepted ticket, validate with `codesign`, `spctl`, and
 
 ## Go Conversion Parity Gate
 
-Python remains the parity oracle while the analyzer is ported to Go. Synthetic
-workbook fixtures under `tests/fixtures/workbooks/` and canonical JSON goldens
-under `tests/fixtures/golden/` are generated by `scripts/emit_goldens.py`.
+Python remains the parity oracle after the Go port. Synthetic workbook fixtures
+under `tests/fixtures/workbooks/` and canonical JSON goldens under
+`tests/fixtures/golden/` are generated by `scripts/emit_goldens.py`.
 
 - `make regenerate-goldens` rebuilds fixtures and goldens.
 - `make verify-goldens` fails when generated output drifts from committed files.

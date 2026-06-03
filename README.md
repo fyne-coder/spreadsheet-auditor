@@ -2,56 +2,79 @@
 
 Local-first workbook review for inherited Excel files.
 
-The product wedge is narrow: inspect unfamiliar `.xlsx` and `.xlsm` workbooks, surface deterministic risk signals, and export review-ready artifacts. The starting opportunity report lives in [docs/opportunity-report.md](docs/opportunity-report.md).
+Spreadsheet Auditor helps analysts review an Excel workbook before they trust
+it. It opens the workbook locally, maps sheets and formulas, flags common review
+risks, and exports a review package you can share with an owner, manager, or AI
+assistant.
 
-## Current Scope
+Use it when you inherit a workbook and need to answer:
 
-This bootstrap implements a small static analyzer:
+- What sheets, formulas, hidden tabs, and external references are in here?
+- Which formulas or workbook areas deserve attention first?
+- What should I ask the workbook owner before using this file?
+- What evidence can I export for cleanup, sign-off, or a second review?
+
+## What It Does Not Do
+
+Spreadsheet Auditor does not prove the workbook's numbers are correct. It does
+not recalculate formulas, run macros, refresh external data, repair formulas, or
+save changes back into the workbook. It does not upload your workbook anywhere.
+
+The optional AI handoff does not call ChatGPT, Claude, Gemini, OpenAI, Anthropic,
+or a Codex app server. It prepares a grounded evidence package you can copy or
+save, use with the assistant you choose, and paste back so the app can check
+whether cited audit evidence exists.
+
+## Distribution Status
+
+Signed Mac builds are not posted yet. The app still needs Developer ID signing
+and Apple notarization before it is ready for external macOS analyst testers.
+Until then, local source builds are for development and Arthur-only testing.
+
+Signing is a packaging step, not a change to how analysis works: the app still
+runs locally and does not upload workbooks. If you prefer to wait for a signed
+build before opening files, that is reasonable. The packaging checklist is in
+[docs/package-readiness.md](docs/package-readiness.md).
+
+## What It Checks Today
+
+The current app checks `.xlsx` and `.xlsm` workbooks for:
 
 - workbook inventory for visible, hidden, and very-hidden sheets
 - formula cell counts by sheet
-- deterministic lint issues for hardcoded numeric constants in formulas
+- hardcoded numeric constants in formulas
 - volatile function detection
-- broken `#REF!` reference detection
+- broken `#REF!` and other Excel error sentinel detection
 - whole-column range pattern detection
 - external workbook reference detection
+- formula-pattern anomaly detection
+- derived analyst priority bands and impact factors
 - JSON report output
-- HTML review-pack export for manager-readable triage
+- HTML and CSV review-pack exports for manager-readable triage
+- desktop app for scanning, filtering, issue review, export, and optional
+  AI-assistant handoff
+- manual AI handoff package export and paste-back citation validation
 
-The analyzer is read-only. It does not execute macros, refresh external links, open data connections, or evaluate formulas.
+The starting opportunity report lives in
+[docs/opportunity-report.md](docs/opportunity-report.md).
 
-## Quick Start
+## Using The Desktop App
 
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
-make check
-```
+When you have a packaged app build:
 
-Scan a workbook and write JSON:
+1. Open Spreadsheet Auditor.
+2. Choose an `.xlsx` or `.xlsm` workbook.
+3. Review the audit overview and priority bands.
+4. Open issue details for the cells that need owner review.
+5. Export an HTML owner summary, detailed audit report, or CSV issue list.
+6. Optionally copy the AI-assistant package, use it with your own assistant,
+   and paste the JSON response back to check citations.
 
-```bash
-spreadsheet-auditor scan path/to/workbook.xlsx --output audit-report.json
-```
+Generated review packs are local artifacts. Treat them like workbook-derived
+work product and keep them out of version control unless they are intentionally
+sanitized.
 
-Export a manager-readable HTML review pack from the same scan:
-
-```bash
-spreadsheet-auditor scan path/to/workbook.xlsx --review-pack review-pack.html
-```
-
-Write both artifacts in one run:
-
-```bash
-spreadsheet-auditor scan path/to/workbook.xlsx \
-  --output audit-report.json \
-  --review-pack review-pack.html
-```
-
-Generated review packs are local artifacts; keep them out of version control (see `.gitignore`).
-
-## Go CLI
+## Building From Source
 
 The Go analyzer mirrors the Python report contract and passes the committed golden
 fixtures:
@@ -64,6 +87,10 @@ go run ./cmd/spreadsheet-auditor scan tests/fixtures/workbooks/combined_risky.xl
   --exported-at 2026-06-02T12:00:00Z
 ```
 
+HTML/CSV exports use the workbook basename by default so local folder names are
+not leaked. Use `--include-full-path` only when the absolute workbook path is
+intentionally part of the review artifact.
+
 Run Go tests and golden verification:
 
 ```bash
@@ -71,15 +98,11 @@ go test ./...
 make verify-goldens
 ```
 
-## Desktop App (Wails v2)
+Build the desktop app:
 
-The desktop shell lives under `desktop/` and calls the same Go analyzer packages as
-the CLI (`internal/audit`, `internal/reviewpack`). It does not invoke Python.
-
-Prerequisites:
-
-- Go 1.24+
-- [Wails v2.12.0](https://wails.io/) CLI installed in `GOPATH/bin` or available as `wails`
+```bash
+make desktop-build
+```
 
 Regenerate frontend bindings after changing `AuditService` methods:
 
@@ -87,11 +110,8 @@ Regenerate frontend bindings after changing `AuditService` methods:
 make desktop-bindings
 ```
 
-Build the macOS app:
-
-```bash
-make desktop-build
-```
+This target removes `desktop/frontend/node_modules` before Wails regeneration;
+the next frontend check or build will run a full `npm ci`.
 
 Run in dev mode:
 
@@ -100,30 +120,39 @@ cd desktop && wails dev
 ```
 
 The built app is written to `desktop/build/bin/`. See [desktop/README.md](desktop/README.md)
-for UI behavior and service methods.
+for desktop implementation details.
 
-### Desktop Signing And Release
+## Contributor Notes
 
-The v0.1 desktop identity is `Spreadsheet Auditor` with bundle identifier
-`com.fynellc.spreadsheet-auditor` and product version `0.1.0`.
+Prerequisites for full development:
 
-Local package smoke and certification preflight:
+- Go 1.24+
+- Node 20+
+- [Wails v2.12.0](https://wails.io/) CLI installed in `GOPATH/bin` or available as `wails`
+- Python 3.11+ for parity fixtures and contributor checks
+
+Set up the Python parity tooling:
 
 ```bash
-make desktop-build
-make package-smoke-mac
-make signing-check-mac
-make notarization-preflight-mac
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
 ```
 
-External macOS tester builds should be Developer ID signed, notarized, stapled,
-and shipped as GitHub Release assets rather than committed binaries. See
-[docs/signing-distribution.md](docs/signing-distribution.md) and
-[docs/package-readiness.md](docs/package-readiness.md).
+Python scripts are for contributors who maintain test fixtures and parity
+checks. Analysts using the desktop app do not need Python.
 
-## v0.1 Direction
+Run the full local gate:
 
-The v0.1 target is a deterministic local desktop analyzer for finance, audit, consulting, and operations teams that need fast workbook triage before close, board reporting, audit review, investor delivery, or client handoff.
+```bash
+make check
+```
+
+## v0.2 Direction
+
+The v0.2 target is a deterministic local desktop analyzer for finance, audit,
+consulting, and operations teams that need fast workbook triage before close,
+board reporting, audit review, investor delivery, or client handoff.
 
 See:
 
@@ -131,3 +160,5 @@ See:
 - [docs/architecture.md](docs/architecture.md)
 - [docs/parity-contract.md](docs/parity-contract.md)
 - [docs/package-readiness.md](docs/package-readiness.md)
+- [docs/signing-distribution.md](docs/signing-distribution.md)
+- [docs/release-notes-v0.2.0.md](docs/release-notes-v0.2.0.md)

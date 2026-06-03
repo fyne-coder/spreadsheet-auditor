@@ -5,19 +5,26 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { issueKey } from "./lib/issueKey";
-import { makeIssue, makeReport } from "./test/fixtures";
+import { makeIssue, makePromptBundle, makeReport } from "./test/fixtures";
 import * as AuditService from "../wailsjs/go/main/AuditService";
+import { model } from "../wailsjs/go/models";
 
 vi.mock("../wailsjs/go/main/AuditService", () => ({
   PickWorkbook: vi.fn(),
   ScanWorkbook: vi.fn(),
   PickExportSavePath: vi.fn(),
   SaveExport: vi.fn(),
+  BuildAIHandoff: vi.fn(),
+  ValidateUnderstandingReport: vi.fn(),
+  PickJSONSavePath: vi.fn(),
+  SaveEvidencePacket: vi.fn(),
+  SavePromptBundle: vi.fn(),
 }));
 
 const mockScanWorkbook = vi.mocked(AuditService.ScanWorkbook);
 const mockPickExportSavePath = vi.mocked(AuditService.PickExportSavePath);
 const mockSaveExport = vi.mocked(AuditService.SaveExport);
+const mockBuildAIHandoff = vi.mocked(AuditService.BuildAIHandoff);
 
 const FIXED_EXPORTED_AT = "2026-06-02T12:00:00.000Z";
 
@@ -50,7 +57,7 @@ async function scanFixtureIssues() {
   renderApp();
   await user.type(screen.getByTestId("workbook-path"), "/tmp/sample.xlsx");
   await user.click(screen.getByTestId("scan-btn"));
-  await screen.findByText(/2 issues found/i);
+  await screen.findByText(/2 issues to review/i);
   return { user, issues, report };
 }
 
@@ -60,6 +67,15 @@ describe("App export flow", () => {
     vi.spyOn(Date.prototype, "toISOString").mockReturnValue(FIXED_EXPORTED_AT);
     mockPickExportSavePath.mockResolvedValue("/tmp/out/review-pack.html");
     mockSaveExport.mockResolvedValue(undefined);
+    mockBuildAIHandoff.mockResolvedValue(
+      new model.AIHandoffPayload({
+        audit_hash: "abc",
+        prompt: "prompt",
+        evidence_packet_json: '{"packet":"canonical"}',
+        prompt_bundle_json: '{"bundle":"canonical"}',
+        bundle: makePromptBundle(),
+      }),
+    );
   });
 
   afterEach(() => {
@@ -71,6 +87,16 @@ describe("App export flow", () => {
     await user.click(screen.getByTestId("export-btn"));
     expect(screen.getByTestId("export-modal")).toBeInTheDocument();
     expect(screen.getByTestId("export-filename")).toHaveTextContent("review-pack.html");
+    expect(screen.getByTestId("export-modal")).toHaveTextContent("Export results");
+    expect(screen.getByTestId("export-modal")).toHaveTextContent("Owner summary");
+  });
+
+  it("shows understanding panel while review-pack export stays available", async () => {
+    const { user } = await scanFixtureIssues();
+    expect(screen.getByTestId("understanding-panel")).toBeInTheDocument();
+    expect(mockBuildAIHandoff).not.toHaveBeenCalled();
+    await user.click(screen.getByTestId("export-btn"));
+    expect(screen.getByTestId("export-modal")).toBeInTheDocument();
   });
 
   it("switches default filename when format changes", async () => {
@@ -79,6 +105,20 @@ describe("App export flow", () => {
     expect(screen.getByTestId("export-filename")).toHaveTextContent("review-pack.html");
 
     await user.click(screen.getByText("CSV"));
+    expect(screen.getByTestId("export-filename")).toHaveTextContent("review-pack.csv");
+
+    await user.click(screen.getByTestId("export-confirm"));
+    await waitFor(() => {
+      expect(mockPickExportSavePath).toHaveBeenCalledWith("csv", "review-pack.csv");
+    });
+  });
+
+  it("uses export job selection to choose the matching format", async () => {
+    const { user } = await scanFixtureIssues();
+    await user.click(screen.getByTestId("export-btn"));
+
+    await user.click(screen.getByLabelText("Issue list"));
+    expect(screen.getByLabelText("Issue list")).toBeChecked();
     expect(screen.getByTestId("export-filename")).toHaveTextContent("review-pack.csv");
 
     await user.click(screen.getByTestId("export-confirm"));
@@ -99,9 +139,33 @@ describe("App export flow", () => {
         "html",
         FIXED_EXPORTED_AT,
         [],
+        false,
       );
     });
     expect(screen.getByTestId("status")).toHaveTextContent(FIXED_EXPORTED_AT);
+  });
+
+  it("blocks export and AI package actions after workbook path changes", async () => {
+    const { user } = await scanFixtureIssues();
+    const pathInput = screen.getByTestId("workbook-path");
+
+    await user.clear(pathInput);
+    await user.type(pathInput, "/tmp/other.xlsx");
+
+    expect(screen.getByTestId("path-dirty-alert")).toHaveTextContent("Rescan required");
+
+    await user.click(screen.getByTestId("export-btn"));
+    expect(screen.queryByTestId("export-confirm")).not.toBeInTheDocument();
+    expect(mockSaveExport).not.toHaveBeenCalled();
+    expect(screen.getByTestId("status")).toHaveTextContent(
+      "Workbook path changed since the last scan",
+    );
+
+    await user.click(screen.getByTestId("understanding-toggle"));
+    expect(mockBuildAIHandoff).not.toHaveBeenCalled();
+    expect(screen.getByTestId("status")).toHaveTextContent(
+      "Rescan before building an AI package",
+    );
   });
 
   it("exports selected issues with issue IDs", async () => {
@@ -125,6 +189,7 @@ describe("App export flow", () => {
         "html",
         FIXED_EXPORTED_AT,
         [firstId],
+        false,
       );
     });
   });
@@ -158,7 +223,26 @@ describe("App export flow", () => {
       "html",
       FIXED_EXPORTED_AT,
       [],
+      false,
     );
+  });
+
+  it("passes include-full-path when the export privacy option is enabled", async () => {
+    const { user } = await scanFixtureIssues();
+    await user.click(screen.getByTestId("export-btn"));
+    await user.click(screen.getByTestId("export-include-full-path"));
+    await user.click(screen.getByTestId("export-confirm"));
+
+    await waitFor(() => {
+      expect(mockSaveExport).toHaveBeenCalledWith(
+        "/tmp/sample.xlsx",
+        "/tmp/out/review-pack.html",
+        "html",
+        FIXED_EXPORTED_AT,
+        [],
+        true,
+      );
+    });
   });
 
   it("handles cancelled save dialog without failing", async () => {

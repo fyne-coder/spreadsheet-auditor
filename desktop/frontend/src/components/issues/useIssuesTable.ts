@@ -20,6 +20,8 @@ import { issueColumns, toIssueRows } from "./issueColumns";
 export type IssuesTableState = ReturnType<typeof useIssuesTable>;
 
 type UseIssuesTableOptions = {
+  columnFilters?: ColumnFiltersState;
+  onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
 };
@@ -27,15 +29,18 @@ type UseIssuesTableOptions = {
 export function useIssuesTable(issues: model.Issue[], options: UseIssuesTableOptions = {}) {
   const data = useMemo(() => toIssueRows(issues), [issues]);
   const [sorting, setSorting] = useState<SortingState>([
+    { id: "Priority", desc: true },
     { id: "Severity", desc: true },
   ]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [internalColumnFilters, setInternalColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [internalRowSelection, setInternalRowSelection] = useState<RowSelectionState>({});
   const rowSelection = options.rowSelection ?? internalRowSelection;
   const onRowSelectionChange = options.onRowSelectionChange ?? setInternalRowSelection;
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 });
+  const columnFilters = options.columnFilters ?? internalColumnFilters;
+  const onColumnFiltersChange = options.onColumnFiltersChange ?? setInternalColumnFilters;
 
   const table = useReactTable({
     data,
@@ -49,7 +54,7 @@ export function useIssuesTable(issues: model.Issue[], options: UseIssuesTableOpt
       pagination,
     },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange,

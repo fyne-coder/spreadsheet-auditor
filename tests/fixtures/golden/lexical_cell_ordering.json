@@ -12,7 +12,14 @@
         "formula": "=TODAY()",
         "sheet": "Order"
       },
+      "impact_factors": [
+        {
+          "code": "isolated_low_risk_volatile",
+          "explanation": "Formula only uses TODAY(), which is volatile but usually lower priority than INDIRECT/OFFSET families."
+        }
+      ],
       "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "priority": "low",
       "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
       "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
       "rule_id": "VOLATILE_FUNCTION",
@@ -31,7 +38,14 @@
         "formula": "=TODAY()",
         "sheet": "Order"
       },
+      "impact_factors": [
+        {
+          "code": "isolated_low_risk_volatile",
+          "explanation": "Formula only uses TODAY(), which is volatile but usually lower priority than INDIRECT/OFFSET families."
+        }
+      ],
       "message": "Formula uses volatile functions that can trigger expensive recalculation.",
+      "priority": "low",
       "rationale": "Volatile functions recalculate on every workbook change, which can slow large models and make timing-dependent results harder to reason about.",
       "remediation": "Replace volatile functions where possible, isolate them on a dedicated calculation sheet, or document why live recalculation is required.",
       "rule_id": "VOLATILE_FUNCTION",

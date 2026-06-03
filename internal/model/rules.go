@@ -26,6 +26,22 @@ var Rules = map[string]RuleDefinition{
 		Rationale:   "The stored formula text still contains #REF!, so the workbook may calculate incorrectly even when neighboring cells look fine.",
 		Remediation: "Repair or remove the broken reference inside the formula, then recalculate downstream dependents after the source range is restored.",
 	},
+	"EXCEL_ERROR_VALUE": {
+		RuleID:      "EXCEL_ERROR_VALUE",
+		Title:       "Excel error value",
+		Severity:    "high",
+		Category:    "formula_integrity",
+		Rationale:   "A cell displays an Excel error sentinel, which usually means the formula or inputs are invalid for the current workbook state.",
+		Remediation: "Open the cell, inspect the formula and its inputs, and fix the underlying reference, type, or calculation problem.",
+	},
+	"EXCEL_ERROR_FORMULA": {
+		RuleID:      "EXCEL_ERROR_FORMULA",
+		Title:       "Excel error sentinel in formula",
+		Severity:    "high",
+		Category:    "formula_integrity",
+		Rationale:   "The stored formula text contains an Excel error sentinel, so the workbook may calculate incorrectly even when neighboring cells look fine.",
+		Remediation: "Repair or remove the error-producing expression inside the formula, then recalculate downstream dependents after the source inputs are corrected.",
+	},
 	"EXTERNAL_WORKBOOK_REFERENCE": {
 		RuleID:      "EXTERNAL_WORKBOOK_REFERENCE",
 		Title:       "External workbook reference",

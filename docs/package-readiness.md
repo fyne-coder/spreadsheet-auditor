@@ -38,7 +38,10 @@ make desktop-build
 make package-smoke-mac
 ```
 
-The app is not externally certified until a Developer ID signed artifact passes:
+The app is not externally certified until a Developer ID signed artifact passes
+these checks. `spctl` and stapler validation are meaningful release gates only
+after Developer ID signing and notarization are in place; unsigned local builds
+may fail them even when they are acceptable for Arthur-only development.
 
 ```bash
 make signing-check-mac
@@ -65,7 +68,7 @@ Needed before external testers:
 - Keep source code and build metadata in git.
 - Keep built app bundles and zip/dmg artifacts out of git.
 - Attach signed, stapled desktop artifacts to GitHub Releases.
-- Mark `v0.1.0` as a prerelease until the macOS artifact is signed, notarized,
+- Mark `v0.2.0` as a prerelease until the macOS artifact is signed, notarized,
   stapled, and smoke-tested from the extracted release zip.
 
 ## Readiness Rules

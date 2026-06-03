@@ -1,5 +1,7 @@
+import { Badge } from "@mantine/core";
 import { createColumnHelper } from "@tanstack/react-table";
 import { model } from "../../../wailsjs/go/models";
+import { comparePriority, impactFactorCodes } from "../../lib/priorityOrder";
 import { issueKey } from "../../lib/issueKey";
 import { TruncatedCell } from "./TruncatedCell";
 
@@ -14,6 +16,21 @@ export function toIssueRows(issues: model.Issue[]): IssueRow[] {
 }
 
 const columnHelper = createColumnHelper<IssueRow>();
+
+function priorityColor(priority: string) {
+  switch (priority) {
+    case "critical":
+      return "red";
+    case "high":
+      return "orange";
+    case "medium":
+      return "yellow";
+    case "low":
+      return "blue";
+    default:
+      return "gray";
+  }
+}
 
 export const issueColumns = [
   columnHelper.display({
@@ -44,6 +61,28 @@ export const issueColumns = [
     ),
     enableSorting: false,
     enableHiding: false,
+  }),
+  columnHelper.accessor("Priority", {
+    header: "Priority",
+    cell: (info) => {
+      const value = info.getValue();
+      if (!value) {
+        return "";
+      }
+      return (
+        <Badge size="sm" variant="light" color={priorityColor(value)}>
+          {value}
+        </Badge>
+      );
+    },
+    sortingFn: (left, right) => comparePriority(left.original.Priority, right.original.Priority),
+    filterFn: "arrIncludesSome",
+  }),
+  columnHelper.accessor((row) => impactFactorCodes(row.ImpactFactors), {
+    id: "impactFactors",
+    header: "Impact",
+    cell: (info) => <TruncatedCell value={info.getValue()} maxWidth={180} />,
+    enableSorting: false,
   }),
   columnHelper.accessor("Severity", {
     header: "Severity",
@@ -84,6 +123,8 @@ export const issueColumns = [
 
 export const columnLabels: Record<string, string> = {
   select: "Select",
+  Priority: "Priority",
+  impactFactors: "Impact",
   Severity: "Severity",
   Category: "Category",
   RuleID: "Rule",

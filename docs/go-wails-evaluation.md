@@ -4,6 +4,13 @@ Date: 2026-06-02
 
 ## Summary
 
+This is a historical planning note from before the Go/Wails implementation
+landed. The current branch followed the recommended direction: keep Python as
+the parity oracle, port the analyzer to Go with Excelize, keep the Go CLI and
+Wails service on the same `AuditReport` model, and verify parity through
+committed fixtures. For the current implementation contract, see
+`docs/architecture.md` and `docs/parity-contract.md`.
+
 The desktop target is viable, but the safest path is not a blind rewrite. Keep the
 existing Python analyzer as the parity oracle, spike the Go parser behavior against
 the existing synthetic tests and ignored public smoke workbooks, then move the Wails
@@ -240,4 +247,3 @@ Acceptance criteria:
 - Python `make check` still passes.
 - One synthetic workbook produces matching summary, sheets, and basic issue IDs.
 - No Wails scaffold is added until the analyzer package boundary is clean.
-

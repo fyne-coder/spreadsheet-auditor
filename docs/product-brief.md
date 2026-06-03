@@ -13,30 +13,39 @@ It should not compete first as a generic spreadsheet AI copilot. Microsoft and G
 - Consultants and fractional CFO teams triaging unfamiliar client files
 - Data and operations teams using Excel as last-mile business logic
 
-## v0.1 Promise
+## Current Promise
 
 Open a workbook, find the highest-risk issues quickly, explain why each issue matters, and export a concise review pack.
 
-## v0.1 Must Haves
+## Current App
 
-- Workbook map: sheets, hidden content, named ranges, formulas, values, links, and connections where available from static metadata.
-- Formula linting: hardcoded constants, inconsistent formulas, broken references, suspicious blanks/errors, volatile functions, risky constructs, whole-column patterns, and unusual complexity.
-- Static performance profiler: volatile functions, large range patterns, whole-column references, repeated expensive lookups, used-range bloat, and external-link sprawl.
-- Change review: compare versions and classify formula, value, format, link, and named-range changes.
-- Review readiness: severity scoring, comments, suppressions, exports, and manager-readable summary.
-- Explainability: exact cells, rule triggered, reason, and suggested remediation.
-- Privacy: local processing by default.
+- Workbook map: visible, hidden, and very-hidden sheets, used ranges, formula counts, and static workbook metadata exposed by the parser.
+- Formula and structure review: hardcoded constants, volatile functions, broken references, Excel error sentinels, external workbook references, whole-column ranges, and formula-pattern anomalies.
+- Analyst routing: deterministic priority bands and impact factors to help reviewers decide what to inspect first.
+- Review readiness: filterable issue table, issue detail drawer, HTML/CSV exports, and manager-readable review packs.
+- Optional AI handoff: a copy/export evidence package for the user's chosen assistant, with paste-back citation validation.
+- Privacy: local processing by default. The app does not upload workbooks or call an AI provider.
 
-## Explicit Non-Goals For v0.1
+## Not Yet In The App
+
+- Workbook comparison/change review between versions.
+- Automated workbook fixes or formula rewrites.
+- Suppression workflow and policy packs.
+- Full dependency graph or live recalculation.
+- Direct ChatGPT/OpenAI/Claude/Gemini integration.
+- Signed/notarized desktop distribution for external testers.
+
+## Explicit Non-Goals
 
 - Autonomous formula rewriting
+- Automatic workbook fixing
 - Macro execution
 - External link refresh
 - Cloud upload as the default path
+- Formula recalculation or numeric correctness certification
 - Google Sheets parity
 - Enterprise policy workflow
 
 ## Product KPI
 
 The key KPI is not total scan count. It is the share of scans where users accept, act on, and share the flagged issues.
-

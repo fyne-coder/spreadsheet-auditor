@@ -13,7 +13,14 @@
         "formula": "=1+2",
         "sheet": "MacroHost"
       },
+      "impact_factors": [
+        {
+          "code": "hardcoded_numeric_constant",
+          "explanation": "Control or assumption values are embedded directly in a formula instead of labeled inputs."
+        }
+      ],
       "message": "Formula contains hardcoded numeric constants.",
+      "priority": "medium",
       "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
       "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
       "rule_id": "HARDCODED_NUMERIC_CONSTANT",

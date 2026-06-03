@@ -1,0 +1,123 @@
+{
+  "audit_hash": "ba3e83e32a417609a7056e1fb8540d249976dcb05d5f2500db11d6d86022d850",
+  "citation_map": {
+    "formula_cluster_ids": [
+      "2d03efc41e406c4f"
+    ],
+    "issue_ids": [
+      "FORMULA_PATTERN_ANOMALY|Revenue|C4|Formula pattern differs from neighboring copied formulas in the same row/column run.|8cd6cf29",
+      "HARDCODED_NUMERIC_CONSTANT|Revenue|C4|Formula contains hardcoded numeric constants.|50c615b1"
+    ],
+    "rule_ids": [
+      "FORMULA_PATTERN_ANOMALY",
+      "HARDCODED_NUMERIC_CONSTANT"
+    ],
+    "sheet_cells": [
+      "Revenue!C4"
+    ],
+    "sheet_names": [
+      "Revenue"
+    ]
+  },
+  "formula_families": [
+    {
+      "formula_cluster_id": "2d03efc41e406c4f",
+      "expected_pattern": "R0C-2*R0C-1",
+      "local_pattern": "R0C-2*R0C-1+100",
+      "member_cells": [
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "orientation": "column",
+      "outlier_cell": "C4",
+      "representative_formula": "=A4*B4+100",
+      "sheet": "Revenue"
+    }
+  ],
+  "audit_findings": [
+    {
+      "cell": "C4",
+      "category": "formula_integrity",
+      "details": {
+        "cluster_cells": [
+          "C2",
+          "C3",
+          "C4",
+          "C5",
+          "C6"
+        ],
+        "cluster_orientation": "column",
+        "expected_pattern": "R0C-2*R0C-1",
+        "local_pattern": "R0C-2*R0C-1+100"
+      },
+      "formula": "=A4*B4+100",
+      "impact_factors": [
+        {
+          "code": "formula_cluster_large",
+          "explanation": "Copied formula family has at least five neighboring cells, so a local anomaly affects a wide block."
+        }
+      ],
+      "issue_id": "FORMULA_PATTERN_ANOMALY|Revenue|C4|Formula pattern differs from neighboring copied formulas in the same row/column run.|8cd6cf29",
+      "message": "Formula pattern differs from neighboring copied formulas in the same row/column run.",
+      "priority": "critical",
+      "rationale": "A formula in a copied row/column run does not match the normalized pattern used by its immediate neighbors, which often signals a paste error or one-off adjustment.",
+      "remediation": "Compare the outlier cell with its neighboring formulas, confirm whether the difference is intentional, and align the formula with the copied pattern when it is not.",
+      "rule_id": "FORMULA_PATTERN_ANOMALY",
+      "severity": "medium",
+      "sheet": "Revenue",
+      "title": "Formula pattern anomaly"
+    },
+    {
+      "cell": "C4",
+      "category": "formula_integrity",
+      "details": {
+        "constants": [
+          "100"
+        ]
+      },
+      "formula": "=A4*B4+100",
+      "impact_factors": [
+        {
+          "code": "hardcoded_numeric_constant",
+          "explanation": "Control or assumption values are embedded directly in a formula instead of labeled inputs."
+        }
+      ],
+      "issue_id": "HARDCODED_NUMERIC_CONSTANT|Revenue|C4|Formula contains hardcoded numeric constants.|50c615b1",
+      "message": "Formula contains hardcoded numeric constants.",
+      "priority": "medium",
+      "rationale": "Numeric literals embedded in formulas are harder to audit, reuse, and update than values stored in labeled input cells.",
+      "remediation": "Move constants into clearly labeled input cells or named ranges and reference those cells from the formula.",
+      "rule_id": "HARDCODED_NUMERIC_CONSTANT",
+      "severity": "medium",
+      "sheet": "Revenue",
+      "title": "Hardcoded numeric constant"
+    }
+  ],
+  "packet_version": "1",
+  "sheets": [
+    {
+      "formula_cells": 5,
+      "name": "Revenue",
+      "state": "visible",
+      "used_range": "A1:C6"
+    }
+  ],
+  "workbook": {
+    "name": "<workbook>",
+    "supported_format": ".xlsx",
+    "summary": {
+      "SheetCount": 1,
+      "FormulaCellCount": 5,
+      "IssueCount": 2,
+      "IssuesBySeverity": {
+        "medium": 2
+      },
+      "IssuesByCategory": {
+        "formula_integrity": 2
+      }
+    }
+  }
+}

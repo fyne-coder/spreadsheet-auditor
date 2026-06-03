@@ -9,22 +9,7 @@ import (
 	"spreadsheet-auditor/internal/model"
 )
 
-var (
-	wholeColumnRangeRE = regexp.MustCompile(`\$?[A-Z]{1,3}:\$?[A-Z]{1,3}`)
-	externalWorkbookRE = regexp.MustCompile(`\[[^\]]+\]`)
-	functionRE         = regexp.MustCompile(`\b([A-Z][A-Z0-9_.]*)\s*\(`)
-)
-
-var volatileFunctions = map[string]struct{}{
-	"CELL":        {},
-	"INFO":        {},
-	"INDIRECT":    {},
-	"NOW":         {},
-	"OFFSET":      {},
-	"RAND":        {},
-	"RANDBETWEEN": {},
-	"TODAY":       {},
-}
+var externalWorkbookRE = regexp.MustCompile(`\[[^\]]+\]`)
 
 func lintFormula(sheet, coordinate, formulaText string) []model.Issue {
 	var issues []model.Issue
@@ -43,14 +28,16 @@ func lintFormula(sheet, coordinate, formulaText string) []model.Issue {
 		))
 	}
 
-	if hasWholeColumnRange(upper) {
+	issues = append(issues, excelErrorFormulaIssues(sheet, coordinate, formulaText)...)
+
+	if rangeRefs := formula.WholeRangeReferences(formulaText); len(rangeRefs) > 0 {
 		issues = append(issues, model.BuildIssue(
 			"WHOLE_COLUMN_RANGE",
 			"Formula references an entire column range, which can slow recalculation.",
 			sheet,
 			coordinate,
 			formulaText,
-			nil,
+			wholeRangeDetails(rangeRefs),
 		))
 	}
 
@@ -85,52 +72,51 @@ func hardcodedNumberIssues(sheet, coordinate, formulaText string) []model.Issue 
 	)}
 }
 
-func volatileFunctionIssues(sheet, coordinate, formula string) []model.Issue {
-	upper := strings.ToUpper(formula)
-	names := map[string]struct{}{}
-	for _, match := range functionRE.FindAllStringSubmatch(upper, -1) {
-		name := match[1]
-		if idx := strings.LastIndex(name, "."); idx >= 0 {
-			name = name[idx+1:]
-		}
-		if _, ok := volatileFunctions[name]; ok {
-			names[name] = struct{}{}
-		}
-	}
-	if len(names) == 0 {
+func volatileFunctionIssues(sheet, coordinate, formulaText string) []model.Issue {
+	result := formula.VolatileFunctions(formulaText)
+	if len(result.Functions) == 0 {
 		return nil
 	}
-	volatile := make([]string, 0, len(names))
-	for name := range names {
-		volatile = append(volatile, name)
+	details := map[string]any{"functions": result.Functions}
+	if result.DynamicArray {
+		details["dynamic_array"] = true
+		details["dynamic_array_functions"] = result.DynamicNames
 	}
-	sort.Strings(volatile)
 	return []model.Issue{model.BuildIssue(
 		"VOLATILE_FUNCTION",
 		"Formula uses volatile functions that can trigger expensive recalculation.",
 		sheet,
 		coordinate,
-		formula,
-		map[string]any{"functions": volatile},
+		formulaText,
+		details,
 	)}
 }
 
-func hasWholeColumnRange(formula string) bool {
-	for _, indexes := range wholeColumnRangeRE.FindAllStringIndex(formula, -1) {
-		start, end := indexes[0], indexes[1]
-		if start > 0 && isFormulaIdentChar(formula[start-1]) {
-			continue
+func wholeRangeDetails(refs []formula.RangeReference) map[string]any {
+	if !needsExpandedRangeDetails(refs) {
+		return nil
+	}
+	return map[string]any{"ranges": rangeReferencesToMaps(refs)}
+}
+
+func needsExpandedRangeDetails(refs []formula.RangeReference) bool {
+	for _, ref := range refs {
+		if ref.Kind != "whole_column" {
+			return true
 		}
-		if end < len(formula) && isFormulaIdentChar(formula[end]) {
-			continue
-		}
-		return true
 	}
 	return false
 }
 
-func isFormulaIdentChar(ch byte) bool {
-	return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_'
+func rangeReferencesToMaps(refs []formula.RangeReference) []map[string]string {
+	out := make([]map[string]string, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, map[string]string{
+			"kind":      ref.Kind,
+			"reference": ref.Reference,
+		})
+	}
+	return out
 }
 
 func sortedUniqueStrings(values []string) []string {

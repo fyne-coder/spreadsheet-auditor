@@ -3,10 +3,13 @@ package reviewpack
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"spreadsheet-auditor/internal/model"
 )
+
+const privateExportFileMode = 0o600
 
 // Format identifies an export output type.
 type Format string
@@ -18,9 +21,19 @@ const (
 
 // ExportOptions configures deterministic HTML or CSV export from an AuditReport.
 type ExportOptions struct {
-	Format     Format
-	ExportedAt time.Time
-	IssueIDs   []string
+	Format          Format
+	ExportedAt      time.Time
+	IssueIDs        []string
+	IncludeFullPath bool
+}
+
+// ExportedWorkbookPath returns the workbook identity string written into exports.
+// By default only the basename is exported so local directory names stay private.
+func ExportedWorkbookPath(workbookPath string, includeFullPath bool) string {
+	if includeFullPath {
+		return workbookPath
+	}
+	return filepath.Base(workbookPath)
 }
 
 // FilterIssues returns issues whose IssueID is listed when ids is non-empty.
@@ -54,12 +67,14 @@ func reportForExport(report *model.AuditReport, opts ExportOptions) *model.Audit
 
 // WriteExport writes HTML or CSV for the report using encoding/csv for CSV output.
 func WriteExport(report *model.AuditReport, outputPath string, opts ExportOptions) error {
+	exportReport := reportForExport(report, opts)
+	workbookIdentity := ExportedWorkbookPath(exportReport.WorkbookPath, opts.IncludeFullPath)
 	switch opts.Format {
 	case FormatHTML:
-		payload := RenderHTML(reportForExport(report, opts), opts.ExportedAt)
-		return os.WriteFile(outputPath, []byte(payload), 0o644)
+		payload := RenderHTML(exportReport, opts.ExportedAt, workbookIdentity)
+		return os.WriteFile(outputPath, []byte(payload), privateExportFileMode)
 	case FormatCSV:
-		return WriteCSV(reportForExport(report, opts), outputPath, opts.ExportedAt)
+		return WriteCSV(exportReport, outputPath, opts.ExportedAt, workbookIdentity)
 	default:
 		return fmt.Errorf("unsupported export format %q (use html or csv)", opts.Format)
 	}

@@ -11,15 +11,19 @@ import (
 )
 
 // RenderHTML renders a manager-readable HTML review pack from an AuditReport.
-// exportedAt is shown in RFC3339 UTC when non-zero.
-func RenderHTML(report *model.AuditReport, exportedAt time.Time) string {
+// workbookIdentity is the workbook label shown in the export; exportedAt is shown
+// in RFC3339 UTC when non-zero.
+func RenderHTML(report *model.AuditReport, exportedAt time.Time, workbookIdentity string) string {
 	summary := report.ReportSummary()
 	severityRows := countRows(summary.IssuesBySeverity)
 	categoryRows := countRows(summary.IssuesByCategory)
 	sheetRows := sheetRows(report.Sheets)
 	issueRows := issueRows(report.Issues)
 
-	workbookPath := html.EscapeString(report.WorkbookPath)
+	if workbookIdentity == "" {
+		workbookIdentity = ExportedWorkbookPath(report.WorkbookPath, false)
+	}
+	workbookPath := html.EscapeString(workbookIdentity)
 	supportedFormat := html.EscapeString(report.SupportedFormat)
 
 	var builder strings.Builder
@@ -112,12 +116,14 @@ func RenderHTML(report *model.AuditReport, exportedAt time.Time) string {
   `)
 	builder.WriteString(table(
 		[]string{
+			"Priority",
 			"Severity",
 			"Category",
 			"Rule",
 			"Sheet",
 			"Cell",
 			"Formula",
+			"Impact factors",
 			"Message",
 			"Remediation",
 		},
@@ -164,7 +170,7 @@ func sheetRows(sheets []model.SheetSummary) [][]string {
 
 func issueRows(issues []model.Issue) [][]string {
 	if len(issues) == 0 {
-		return [][]string{{"(none)", "", "", "", "", "", "", ""}}
+		return [][]string{{"(none)", "", "", "", "", "", "", "", "", ""}}
 	}
 	rows := make([][]string, 0, len(issues))
 	for _, issue := range issues {
@@ -177,17 +183,43 @@ func issueRows(issues []model.Issue) [][]string {
 			)
 		}
 		rows = append(rows, []string{
+			priorityCell(issue.Priority),
 			severityCell(issue.Severity),
 			html.EscapeString(issue.Category),
 			html.EscapeString(fmt.Sprintf("%s: %s", issue.RuleID, issue.Title)),
 			html.EscapeString(issue.Evidence.Sheet),
 			html.EscapeString(issue.Evidence.Cell),
 			formulaCell,
+			html.EscapeString(impactFactorSummary(issue.ImpactFactors)),
 			html.EscapeString(issue.Message),
 			html.EscapeString(issue.Remediation),
 		})
 	}
 	return rows
+}
+
+func priorityCell(priority string) string {
+	switch priority {
+	case model.PriorityCritical, model.PriorityHigh, model.PriorityMedium, model.PriorityLow:
+		return fmt.Sprintf(
+			`<span class="severity-%s">%s</span>`,
+			priority,
+			html.EscapeString(priority),
+		)
+	default:
+		return html.EscapeString(priority)
+	}
+}
+
+func impactFactorSummary(factors []model.ImpactFactor) string {
+	if len(factors) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(factors))
+	for _, factor := range factors {
+		parts = append(parts, factor.Code)
+	}
+	return strings.Join(parts, ", ")
 }
 
 func severityCell(severity string) string {

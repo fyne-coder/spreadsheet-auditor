@@ -14,7 +14,12 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { flexRender, type OnChangeFn, type RowSelectionState } from "@tanstack/react-table";
+import {
+  flexRender,
+  type ColumnFiltersState,
+  type OnChangeFn,
+  type RowSelectionState,
+} from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { model } from "../../../wailsjs/go/models";
 import { columnLabels } from "./issueColumns";
@@ -24,6 +29,8 @@ import { useIssuesTable } from "./useIssuesTable";
 
 type Props = {
   issues: model.Issue[];
+  columnFilters?: ColumnFiltersState;
+  onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
 };
@@ -193,11 +200,26 @@ function FacetFilter({ config, options, selectedValues, onChange, onClear }: Fac
   );
 }
 
-export function IssuesTable({ issues, rowSelection, onRowSelectionChange }: Props) {
+export function IssuesTable({
+  issues,
+  columnFilters,
+  onColumnFiltersChange,
+  rowSelection,
+  onRowSelectionChange,
+}: Props) {
   const { table, globalFilter, setGlobalFilter, filteredCount, selectedCount, totalCount } =
-    useIssuesTable(issues, { rowSelection, onRowSelectionChange });
+    useIssuesTable(issues, {
+      columnFilters,
+      onColumnFiltersChange,
+      rowSelection,
+      onRowSelectionChange,
+    });
   const [detailIssue, setDetailIssue] = useState<model.Issue | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const openIssueDetail = useCallback((issue: model.Issue) => {
+    setDetailIssue(issue);
+    setDrawerOpen(true);
+  }, []);
 
   const facetConfigs: FacetConfig[] = useMemo(
     () => [
@@ -381,6 +403,7 @@ export function IssuesTable({ issues, rowSelection, onRowSelectionChange }: Prop
                             : null}
                       </Table.Th>
                     ))}
+                    <Table.Th style={{ whiteSpace: "nowrap" }}>Details</Table.Th>
                   </Table.Tr>
                 ))}
               </Table.Thead>
@@ -388,10 +411,7 @@ export function IssuesTable({ issues, rowSelection, onRowSelectionChange }: Prop
                 {table.getRowModel().rows.map((row) => (
                   <Table.Tr
                     key={row.id}
-                    onClick={() => {
-                      setDetailIssue(row.original);
-                      setDrawerOpen(true);
-                    }}
+                    onClick={() => openIssueDetail(row.original)}
                     style={{ cursor: "pointer" }}
                     data-testid={`issue-row-${row.id}`}
                   >
@@ -406,6 +426,22 @@ export function IssuesTable({ issues, rowSelection, onRowSelectionChange }: Prop
                         )}
                       </Table.Td>
                     ))}
+                    <Table.Td>
+                      <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openIssueDetail(row.original);
+                        }}
+                        data-testid={`issue-details-${row.id}`}
+                        aria-label={`Open details for ${row.original.RuleID} at ${
+                          row.original.Evidence?.Sheet ?? "unknown sheet"
+                        } ${row.original.Evidence?.Cell ?? "unknown cell"}`}
+                      >
+                        Details
+                      </Button>
+                    </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>

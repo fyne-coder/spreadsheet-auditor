@@ -1,4 +1,5 @@
 import type { model } from "../../wailsjs/go/models";
+import { impactFactorCodes } from "./priorityOrder";
 
 export function issueSearchText(issue: model.Issue): string {
   const parts = [
@@ -7,6 +8,8 @@ export function issueSearchText(issue: model.Issue): string {
     issue.Message,
     issue.Rationale,
     issue.Remediation,
+    issue.Priority,
+    impactFactorCodes(issue.ImpactFactors),
     issue.Severity,
     issue.Category,
     issue.Evidence?.Sheet,

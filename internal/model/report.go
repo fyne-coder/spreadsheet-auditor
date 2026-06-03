@@ -13,15 +13,18 @@ type IssueEvidence struct {
 }
 
 type Issue struct {
-	RuleID      string
-	Title       string
-	Severity    string
-	Category    string
-	Rationale   string
-	Remediation string
-	Message     string
-	Evidence    IssueEvidence
-	Details     map[string]any
+	IssueID       string
+	RuleID        string
+	Title         string
+	Severity      string
+	Category      string
+	Priority      string
+	ImpactFactors []ImpactFactor
+	Rationale     string
+	Remediation   string
+	Message       string
+	Evidence      IssueEvidence
+	Details       map[string]any
 }
 
 type SheetSummary struct {
@@ -136,16 +139,23 @@ type evidenceJSON struct {
 	Sheet   string  `json:"sheet"`
 }
 
+type impactFactorJSON struct {
+	Code        string `json:"code"`
+	Explanation string `json:"explanation"`
+}
+
 type issueJSON struct {
-	Category    string         `json:"category"`
-	Details     map[string]any `json:"details,omitempty"`
-	Evidence    evidenceJSON   `json:"evidence"`
-	Message     string         `json:"message"`
-	Rationale   string         `json:"rationale"`
-	Remediation string         `json:"remediation"`
-	RuleID      string         `json:"rule_id"`
-	Severity    string         `json:"severity"`
-	Title       string         `json:"title"`
+	Category      string             `json:"category"`
+	Details       map[string]any     `json:"details,omitempty"`
+	Evidence      evidenceJSON       `json:"evidence"`
+	ImpactFactors []impactFactorJSON `json:"impact_factors,omitempty"`
+	Message       string             `json:"message"`
+	Priority      string             `json:"priority,omitempty"`
+	Rationale     string             `json:"rationale"`
+	Remediation   string             `json:"remediation"`
+	RuleID        string             `json:"rule_id"`
+	Severity      string             `json:"severity"`
+	Title         string             `json:"title"`
 }
 
 type sheetJSON struct {
@@ -184,11 +194,22 @@ func issueToJSON(issue Issue) issueJSON {
 		Category:    issue.Category,
 		Evidence:    evidence,
 		Message:     issue.Message,
+		Priority:    issue.Priority,
 		Rationale:   issue.Rationale,
 		Remediation: issue.Remediation,
 		RuleID:      issue.RuleID,
 		Severity:    issue.Severity,
 		Title:       issue.Title,
+	}
+	if len(issue.ImpactFactors) > 0 {
+		factors := make([]impactFactorJSON, 0, len(issue.ImpactFactors))
+		for _, factor := range issue.ImpactFactors {
+			factors = append(factors, impactFactorJSON{
+				Code:        factor.Code,
+				Explanation: factor.Explanation,
+			})
+		}
+		payload.ImpactFactors = factors
 	}
 	if len(issue.Details) > 0 {
 		details := make(map[string]any, len(issue.Details))

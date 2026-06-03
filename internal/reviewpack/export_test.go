@@ -25,7 +25,7 @@ func TestWriteCSVUsesFixedExportedAt(t *testing.T) {
 	}
 	exportedAt := time.Date(2026, 6, 2, 15, 4, 5, 0, time.UTC)
 	outputPath := filepath.Join(t.TempDir(), "review-pack.csv")
-	if err := WriteCSV(report, outputPath, exportedAt); err != nil {
+	if err := WriteCSV(report, outputPath, exportedAt, ExportedWorkbookPath(report.WorkbookPath, false)); err != nil {
 		t.Fatalf("write csv: %v", err)
 	}
 
@@ -123,7 +123,7 @@ func TestWriteCSVAppliesInjectionPolicyToFormulaCells(t *testing.T) {
 		t.Fatalf("audit workbook: %v", err)
 	}
 	outputPath := filepath.Join(t.TempDir(), "review-pack.csv")
-	if err := WriteCSV(report, outputPath, fixedExportedAt); err != nil {
+	if err := WriteCSV(report, outputPath, fixedExportedAt, ExportedWorkbookPath(report.WorkbookPath, false)); err != nil {
 		t.Fatalf("write csv: %v", err)
 	}
 	content, err := os.ReadFile(outputPath)
@@ -135,12 +135,107 @@ func TestWriteCSVAppliesInjectionPolicyToFormulaCells(t *testing.T) {
 	}
 }
 
+func TestExportedWorkbookPathDefaultsToBasename(t *testing.T) {
+	got := ExportedWorkbookPath("/Users/reviewer/customer/model.xlsx", false)
+	if got != "model.xlsx" {
+		t.Fatalf("basename export identity = %q", got)
+	}
+}
+
+func TestExportedWorkbookPathIncludesFullPathWhenOptedIn(t *testing.T) {
+	full := "/Users/reviewer/customer/model.xlsx"
+	if ExportedWorkbookPath(full, true) != full {
+		t.Fatal("expected full workbook path when opted in")
+	}
+}
+
+func TestWriteExportUsesPrivateFileMode(t *testing.T) {
+	report := &model.AuditReport{
+		WorkbookPath:    "/tmp/private/customer.xlsx",
+		SupportedFormat: ".xlsx",
+	}
+	dir := t.TempDir()
+	htmlPath := filepath.Join(dir, "review-pack.html")
+	csvPath := filepath.Join(dir, "review-pack.csv")
+	opts := ExportOptions{ExportedAt: fixedExportedAt}
+
+	if err := WriteExport(report, htmlPath, ExportOptions{Format: FormatHTML, ExportedAt: opts.ExportedAt}); err != nil {
+		t.Fatalf("write html export: %v", err)
+	}
+	if err := WriteExport(report, csvPath, ExportOptions{Format: FormatCSV, ExportedAt: opts.ExportedAt}); err != nil {
+		t.Fatalf("write csv export: %v", err)
+	}
+	for _, path := range []string{htmlPath, csvPath} {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+		if info.Mode().Perm() != privateExportFileMode {
+			t.Fatalf("%s mode = %o, want %o", path, info.Mode().Perm(), privateExportFileMode)
+		}
+	}
+}
+
+func TestWriteExportDefaultsWorkbookIdentityToBasename(t *testing.T) {
+	report, err := audit.AuditWorkbook(workbookPath(t, "escaping_workbook_text"))
+	if err != nil {
+		t.Fatalf("audit workbook: %v", err)
+	}
+	outputPath := filepath.Join(t.TempDir(), "review-pack.csv")
+	if err := WriteExport(report, outputPath, ExportOptions{
+		Format:     FormatCSV,
+		ExportedAt: fixedExportedAt,
+	}); err != nil {
+		t.Fatalf("write csv export: %v", err)
+	}
+	rows := readCSVRows(t, outputPath)
+	if rows[1][1] != filepath.Base(report.WorkbookPath) {
+		t.Fatalf("workbook_path = %q, want basename %q", rows[1][1], filepath.Base(report.WorkbookPath))
+	}
+}
+
+func TestWriteExportIncludesFullPathWhenOptedIn(t *testing.T) {
+	report, err := audit.AuditWorkbook(workbookPath(t, "escaping_workbook_text"))
+	if err != nil {
+		t.Fatalf("audit workbook: %v", err)
+	}
+	outputPath := filepath.Join(t.TempDir(), "review-pack.csv")
+	if err := WriteExport(report, outputPath, ExportOptions{
+		Format:          FormatCSV,
+		ExportedAt:      fixedExportedAt,
+		IncludeFullPath: true,
+	}); err != nil {
+		t.Fatalf("write csv export: %v", err)
+	}
+	rows := readCSVRows(t, outputPath)
+	if rows[1][1] != report.WorkbookPath {
+		t.Fatalf("workbook_path = %q, want full path %q", rows[1][1], report.WorkbookPath)
+	}
+}
+
+func readCSVRows(t *testing.T, outputPath string) [][]string {
+	t.Helper()
+	file, err := os.Open(outputPath)
+	if err != nil {
+		t.Fatalf("open csv: %v", err)
+	}
+	defer file.Close()
+	rows, err := csv.NewReader(file).ReadAll()
+	if err != nil {
+		t.Fatalf("read csv: %v", err)
+	}
+	if len(rows) < 2 {
+		t.Fatalf("expected header and data rows, got %d", len(rows))
+	}
+	return rows
+}
+
 func TestRenderHTMLIncludesExportedAtMetadata(t *testing.T) {
 	report := &model.AuditReport{
 		WorkbookPath:    "/tmp/example.xlsx",
 		SupportedFormat: ".xlsx",
 	}
-	htmlOutput := RenderHTML(report, fixedExportedAt)
+	htmlOutput := RenderHTML(report, fixedExportedAt, "example.xlsx")
 	if !strings.Contains(htmlOutput, "Exported at:") {
 		t.Fatal("expected exported-at metadata in HTML")
 	}

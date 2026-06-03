@@ -16,7 +16,7 @@ func main() {
 
 func run(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: spreadsheet-auditor scan WORKBOOK [--output PATH] [--review-pack PATH] [--export-csv PATH] [--exported-at RFC3339]")
+		fmt.Fprintln(os.Stderr, "usage: spreadsheet-auditor scan WORKBOOK [--output PATH] [--review-pack PATH] [--export-csv PATH] [--exported-at RFC3339] [--include-full-path]")
 		return 2
 	}
 
@@ -36,6 +36,7 @@ func run(args []string) int {
 	reviewPack := fs.String("review-pack", "", "write HTML review pack to this path")
 	exportCSV := fs.String("export-csv", "", "write CSV review pack to this path")
 	exportedAtFlag := fs.String("exported-at", "", "RFC3339 timestamp for HTML/CSV exports (defaults to now in UTC)")
+	includeFullPath := fs.Bool("include-full-path", false, "include absolute workbook path in HTML/CSV exports")
 	scanArgs := reorderScanArgs(args[1:])
 	if err := fs.Parse(scanArgs); err != nil {
 		return 2
@@ -85,8 +86,9 @@ func run(args []string) int {
 
 	if reviewPackTarget != "" {
 		if err := reviewpack.WriteExport(report, reviewPackTarget, reviewpack.ExportOptions{
-			Format:     reviewpack.FormatHTML,
-			ExportedAt: exportedAt,
+			Format:          reviewpack.FormatHTML,
+			ExportedAt:      exportedAt,
+			IncludeFullPath: *includeFullPath,
 		}); err != nil {
 			fmt.Fprintf(os.Stderr, "write failed: %v\n", err)
 			return 1
@@ -95,8 +97,9 @@ func run(args []string) int {
 
 	if csvTarget != "" {
 		if err := reviewpack.WriteExport(report, csvTarget, reviewpack.ExportOptions{
-			Format:     reviewpack.FormatCSV,
-			ExportedAt: exportedAt,
+			Format:          reviewpack.FormatCSV,
+			ExportedAt:      exportedAt,
+			IncludeFullPath: *includeFullPath,
 		}); err != nil {
 			fmt.Fprintf(os.Stderr, "write failed: %v\n", err)
 			return 1
@@ -132,6 +135,8 @@ func reorderScanArgs(args []string) []string {
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
 		switch arg {
+		case "--include-full-path":
+			flags = append(flags, arg)
 		case "--output", "-o", "--review-pack", "--export-csv", "--exported-at":
 			flags = append(flags, arg)
 			if index+1 < len(args) {

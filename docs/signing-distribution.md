@@ -21,7 +21,7 @@ Current app identity:
 - bundle identifier: `com.fynellc.spreadsheet-auditor`
 - output executable: `spreadsheet-auditor-desktop`
 - publisher: `Fyne LLC`
-- version: `0.1.0`
+- version: `0.2.0`
 
 Readiness gates:
 
@@ -37,7 +37,7 @@ to a GitHub Release, not committed to the repository.
 
 ## Windows
 
-Windows remains a portability target, but it is not certified in v0.1. Public
+Windows remains a portability target, but it is not certified in v0.2. Public
 Windows distribution should use either a signed installer or MSIX path. A
 non-Store installer needs Authenticode signing with SHA-256 timestamping and
 SmartScreen reputation planning.

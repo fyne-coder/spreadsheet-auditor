@@ -88,8 +88,8 @@ Go exports are rendered from the in-memory `AuditReport` without re-reading JSON
 | Field / rule | Parity rule |
 | --- | --- |
 | `exported_at` | RFC3339 UTC in HTML metadata and the first CSV column |
-| `issue_id` | `rule_id\|sheet\|cell\|message` for export selection |
-| CSV header order | Fixed: `exported_at`, `workbook_path`, `supported_format`, `issue_id`, `severity`, `category`, `rule_id`, `title`, `sheet`, `cell`, `formula`, `message`, `rationale`, `remediation`, `details_json` |
+| `issue_id` | `rule_id\|sheet\|cell\|message\|suffix` for export selection. The suffix is an 8-hex deterministic hash of formula/details evidence. |
+| CSV header order | Fixed: `exported_at`, `workbook_path`, `supported_format`, `issue_id`, `priority`, `impact_factors`, `severity`, `category`, `rule_id`, `title`, `sheet`, `cell`, `formula`, `message`, `rationale`, `remediation`, `details_json` |
 | `details_json` | Sorted object keys, `SetEscapeHTML(false)`, no trailing newline |
 | CSV injection | Prefix values starting with `=`, `+`, `-`, `@`, tab, or carriage return with `'` before `encoding/csv` writes the field |
 | Selected export | Backend filters by `issue_id`; unknown IDs are ignored |
@@ -108,6 +108,51 @@ macro execution, VBA analysis, or link refresh.
 - `single_value_cell`: one non-formula value cell
 
 These lock baseline inventory behavior for sparse workbooks.
+
+## Sparse Sheet Iteration (Go)
+
+The Go analyzer walks worksheet rows with Excelize `GetRows()`, which is built
+on the library's `Rows()` / `Columns()` iterator, instead of iterating every
+coordinate inside `GetSheetDimension()`. This keeps bloated declared dimensions
+from triggering a full rectangular cell walk while preserving actual row indexes
+for sparse populated rows.
+
+Committed goldens for existing fixtures remain unchanged.
+
+## Excel Error Sentinels (Go-only until Python parity)
+
+Go adds these rules beyond the existing `#REF!` pair:
+
+| Rule | Trigger |
+| --- | --- |
+| `EXCEL_ERROR_VALUE` | Displayed `#DIV/0!`, `#VALUE!`, `#NAME?`, `#N/A`, `#NUM!`, `#NULL!`, `#SPILL!`, `#CALC!` |
+| `EXCEL_ERROR_FORMULA` | Stored formula text contains one of the same sentinels |
+
+`#REF!` continues to use `BROKEN_REF_VALUE` / `BROKEN_REF_FORMULA` for golden
+parity. New rules emit `details.error_code` with the exact sentinel string.
+
+Python parity for the new rules is not part of the committed golden gate yet;
+Go unit tests in `internal/audit/sheet_scan_test.go` cover sparse iteration and
+error detection.
+
+## Analyst Priority Bands
+
+Go and Python both add derived analyst routing fields on each issue:
+
+| Field | Meaning |
+| --- | --- |
+| `priority` | Deterministic band: `critical`, `high`, `medium`, or `low` |
+| `impact_factors` | Sorted `{code, explanation}` entries explaining the band |
+
+Rule `severity` is unchanged. Priority is assigned in `internal/priority` from
+sheet visibility, output-like sheet names, external dependencies, formula-cluster
+size, risky volatile functions, hardcoded constants, and isolated low-risk `TODAY()`
+usage.
+
+Committed analyzer JSON goldens under `tests/fixtures/golden/*.json` remain a
+Python/Go parity contract. `make verify-goldens` compares generated workbook
+fixtures and Python JSON to committed files, then runs the Go golden parity test
+against the same committed JSON.
 
 ## Public / Customer Smoke Workbooks
 

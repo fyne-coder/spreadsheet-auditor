@@ -68,7 +68,7 @@ Needed before external testers:
 - Keep source code and build metadata in git.
 - Keep built app bundles and zip/dmg artifacts out of git.
 - Attach signed, stapled desktop artifacts to GitHub Releases.
-- Mark `v0.2.0` as a prerelease until the macOS artifact is signed, notarized,
+- Mark `v0.2.1` as a prerelease until the macOS artifact is signed, notarized,
   stapled, and smoke-tested from the extracted release zip.
 
 ## Readiness Rules

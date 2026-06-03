@@ -371,7 +371,7 @@ notarization planning:
 - product name: `Spreadsheet Auditor`
 - bundle identifier: `com.fynellc.spreadsheet-auditor`
 - output executable: `spreadsheet-auditor-desktop`
-- product version: `0.2.0`
+- product version: `0.2.1`
 
 The certification path mirrors the prior Gongctl Desktop pattern: keep source in
 git, build locally, Developer ID sign with hardened runtime, submit to Apple

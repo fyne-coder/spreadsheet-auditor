@@ -58,6 +58,38 @@ The current app checks `.xlsx` and `.xlsm` workbooks for:
 The starting opportunity report lives in
 [docs/opportunity-report.md](docs/opportunity-report.md).
 
+## Desktop App Screenshots
+
+These screenshots use the synthetic
+`tests/fixtures/workbooks/combined_risky.xlsx` demo workbook. The fixture is
+small, but it includes enough review signals to show the normal analyst flow:
+priority routing, formula-level issues, export options, and optional AI handoff.
+
+![Desktop overview showing workbook summary, priority routing, and issue table](docs/screenshots/desktop-overview.png)
+
+The overview answers the first triage question: how much is in this workbook,
+where are the highest-priority findings, and which cells need review first. The
+priority cards are routing aids, not proof that the workbook is right or wrong.
+
+![Issue detail drawer showing formula evidence and suggested owner question](docs/screenshots/desktop-issue-detail.png)
+
+Opening an issue shows the exact sheet and cell, the stored formula, why the
+rule fired, a practical remediation, and an owner question an analyst can use in
+follow-up. The scanner is still static and read-only; it has not recalculated
+the workbook.
+
+![Export modal showing owner summary, detailed audit, and issue-list choices](docs/screenshots/desktop-export-options.png)
+
+The export flow lets an analyst create a local owner summary, detailed audit
+report, or CSV issue list. Exports use the workbook filename by default so local
+folder names stay private unless the user explicitly includes the full path.
+
+![Optional AI handoff panel showing objective, exclusions, provider caps, and prompt preview](docs/screenshots/desktop-ai-handoff.png)
+
+The AI handoff is optional. It packages workbook-derived evidence for the
+assistant the user chooses, lets the user hide sheets or cells, and asks for a
+cited response that can be pasted back into the app for citation checks.
+
 ## Using The Desktop App
 
 When you have a packaged app build:
@@ -161,4 +193,5 @@ See:
 - [docs/parity-contract.md](docs/parity-contract.md)
 - [docs/package-readiness.md](docs/package-readiness.md)
 - [docs/signing-distribution.md](docs/signing-distribution.md)
+- [docs/release-notes-v0.2.1.md](docs/release-notes-v0.2.1.md)
 - [docs/release-notes-v0.2.0.md](docs/release-notes-v0.2.0.md)

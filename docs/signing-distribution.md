@@ -21,7 +21,7 @@ Current app identity:
 - bundle identifier: `com.fynellc.spreadsheet-auditor`
 - output executable: `spreadsheet-auditor-desktop`
 - publisher: `Fyne LLC`
-- version: `0.2.0`
+- version: `0.2.1`
 
 Readiness gates:
 
